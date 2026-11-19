@@ -1,0 +1,19 @@
+node_modules
+dist
+server-dist
+release
+*.log
+.env
+.env.*
+!.env.example
+coverage
+test-results
+e2e/screenshots
+android/app/build
+android/build
+android/.gradle
+# Pliki generowane przez "npx cap sync"
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/capacitor-cordova-android-plugins

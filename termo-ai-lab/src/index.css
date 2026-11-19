@@ -1,0 +1,236 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------
+   TERMO AI LAB — design system
+   Granat + grafit jako tło, turkus/błękit (technologia), fiolet (AI),
+   bursztyn (ciepłownictwo). Kolory poziomów: zielony / żółty / czerwony.
+   ------------------------------------------------------------------ */
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Space Grotesk Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('./assets/fonts/space-grotesk-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Space Grotesk Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('./assets/fonts/space-grotesk-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@theme {
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Space Grotesk Variable', 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+
+  /* Tło */
+  --color-ink-950: #050812;
+  --color-ink-900: #070b18;
+  --color-ink-850: #0a1122;
+  --color-ink-800: #0e1629;
+  --color-ink-700: #152036;
+  --color-ink-600: #1e2a44;
+  --color-graphite: #161b26;
+
+  /* Tekst */
+  --color-fg: #eaf0fb;
+  --color-fg-muted: #a9b5cc;
+  --color-fg-subtle: #7c89a3;
+
+  /* Akcenty */
+  --color-tech: #2dd4bf;
+  --color-tech-strong: #14b8a6;
+  --color-sky: #38bdf8;
+  --color-ai: #a78bfa;
+  --color-ai-strong: #8b5cf6;
+  --color-heat: #f59e0b;
+  --color-heat-soft: #fbbf24;
+  --color-ember: #fb923c;
+
+  /* Poziomy */
+  --color-lvl-1: #34d399;
+  --color-lvl-2: #facc15;
+  --color-lvl-3: #f87171;
+
+  /* Stany */
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-bad: #f87171;
+
+  --radius-card: 1.25rem;
+  --shadow-glow-tech: 0 0 0 1px rgb(45 212 191 / 0.25), 0 8px 32px -8px rgb(45 212 191 / 0.35);
+  --shadow-glow-ai: 0 0 0 1px rgb(167 139 250 / 0.3), 0 8px 32px -8px rgb(139 92 246 / 0.45);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 20px 40px -24px rgb(0 0 0 / 0.6);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3.2s ease-in-out infinite;
+  --animate-blink: blink 5s infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes blink {
+    0%,
+    92%,
+    100% {
+      transform: scaleY(1);
+    }
+    95% {
+      transform: scaleY(0.1);
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+  --level-color: var(--color-tech);
+  --app-font-scale: 1;
+}
+
+html {
+  font-size: calc(100% * var(--app-font-scale));
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-ink-900);
+}
+
+html[data-large-text='true'] {
+  --app-font-scale: 1.125;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  color: var(--color-fg);
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgb(139 92 246 / 0.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(245 158 11 / 0.08), transparent 60%),
+    radial-gradient(800px 500px at 10% 0%, rgb(45 212 191 / 0.07), transparent 55%),
+    linear-gradient(180deg, var(--color-ink-900), var(--color-ink-950));
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+::selection {
+  background: rgb(45 212 191 / 0.35);
+  color: #fff;
+}
+
+/* Wyraźny wskaźnik fokusu dla obsługi klawiaturą */
+:focus-visible {
+  outline: 3px solid var(--color-sky);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/* Ograniczenie animacji: ustawienie systemowe lub ustawienie w aplikacji */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='full']) *,
+  html:not([data-motion='full']) *::before,
+  html:not([data-motion='full']) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@utility glass {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.025));
+  border: 1px solid rgb(255 255 255 / 0.09);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+@utility glass-strong {
+  background: linear-gradient(180deg, rgb(22 32 56 / 0.985), rgb(12 19 36 / 0.985));
+  border: 1px solid rgb(255 255 255 / 0.1);
+  box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.75);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+@utility text-gradient-brand {
+  background: linear-gradient(100deg, #e9fbff 0%, #8ff0e2 35%, #b9a6ff 70%, #ffd38a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.15) transparent;
+}
+
+/* Treści lekcji: wygodna długość wiersza i odstępy */
+.prose-lesson p + p {
+  margin-top: 0.75rem;
+}
+
+.prompt-text {
+  font-family: var(--font-sans);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+textarea {
+  field-sizing: content;
+}

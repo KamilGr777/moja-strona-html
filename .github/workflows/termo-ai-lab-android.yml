@@ -1,0 +1,72 @@
+# Buduje TERMO AI LAB: testy, build produkcyjny, pakiet WWW oraz instalator Android (APK, debug).
+# Wyniki do pobrania: zakładka Actions → wybrany przebieg → sekcja „Artifacts”.
+name: TERMO AI LAB — build i APK
+
+on:
+  push:
+    paths:
+      - 'termo-ai-lab/**'
+      - '.github/workflows/termo-ai-lab-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: termo-ai-lab
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: termo-ai-lab/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalacja zależności
+        run: npm ci
+
+      - name: Testy jednostkowe
+        run: npm test
+
+      - name: Build produkcyjny (aplikacja + serwer)
+        run: npm run build
+        env:
+          # Opcjonalnie: adres serwera API dla aplikacji mobilnej (zmienna repozytorium TERMO_API_BASE_URL).
+          VITE_API_BASE_URL: ${{ vars.TERMO_API_BASE_URL }}
+
+      - name: Pakiet serwera WWW
+        run: npm run package
+
+      - name: Synchronizacja projektu Android
+        run: npx cap sync android
+
+      - name: Budowanie APK (debug)
+        working-directory: termo-ai-lab/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: termo-ai-lab-android-apk
+          path: termo-ai-lab/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: termo-ai-lab-pakiet-www
+          path: termo-ai-lab/release/*.zip
+          if-no-files-found: error

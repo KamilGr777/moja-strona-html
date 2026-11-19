@@ -1,0 +1,4 @@
+Fonty Inter (Rasmus Andersson) oraz Space Grotesk (Florian Karsten) są udostępnione
+na licencji SIL Open Font License 1.1 (https://openfontlicense.org).
+Pliki pochodzą z pakietów @fontsource-variable/inter i @fontsource-variable/space-grotesk
+(podzbiory latin i latin-ext, wymagane dla polskich znaków).
