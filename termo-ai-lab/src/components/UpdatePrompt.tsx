@@ -13,7 +13,7 @@ export function UpdatePrompt() {
   const [update, setUpdate] = useState<UpdateFn | null>(null);
 
   useEffect(() => {
-    if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+    if (__STANDALONE__ || !import.meta.env.PROD || !('serviceWorker' in navigator)) return;
     let cancelled = false;
     import('virtual:pwa-register')
       .then(({ registerSW }) => {

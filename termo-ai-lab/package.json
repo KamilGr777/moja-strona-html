@@ -18,7 +18,9 @@
     "package": "node scripts/package-release.mjs",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:apk": "npm run cap:sync && cd android && ./gradlew assembleDebug",
-    "e2e:mock-server": "tsx e2e/mock-ai-server.ts"
+    "e2e:mock-server": "tsx e2e/mock-ai-server.ts",
+    "build:standalone": "vite build --config vite.standalone.config.ts",
+    "test:standalone": "tsx e2e/run-standalone.ts"
   },
   "engines": {
     "node": ">=20"
@@ -55,6 +57,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vite-plugin-pwa": "^2.0.0",
+    "vite-plugin-singlefile": "^2.3.4",
     "vitest": "^5.1.1",
     "workbox-window": "^7.4.1"
   }

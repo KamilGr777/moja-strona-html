@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { ArrowRight, Layers, Play } from 'lucide-react';
 import { NetworkBackground } from '../components/NetworkBackground';
+import logoUrl from '../assets/logo.svg';
 import { Button } from '../components/ui';
 import { getLesson } from '../content/lessons';
 import { LEVELS } from '../content/levels';
@@ -37,7 +38,7 @@ export function Welcome() {
       />
       <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-5 py-16 text-center">
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-7 flex items-center gap-3">
-          <img src="./favicon.svg" alt="" className="size-10 drop-shadow-[0_0_14px_rgb(45_212_191/0.6)]" />
+          <img src={logoUrl} alt="" className="size-10 drop-shadow-[0_0_14px_rgb(45_212_191/0.6)]" />
           <span className="font-display text-sm font-semibold tracking-[0.32em] text-fg-muted">TERMO AI LAB</span>
         </motion.div>
 

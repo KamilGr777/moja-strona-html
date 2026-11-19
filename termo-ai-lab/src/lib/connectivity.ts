@@ -17,7 +17,8 @@ export const useConnectivity = create<ConnectivityState>((set) => ({
   check: async () => {
     const online = typeof navigator === 'undefined' ? true : navigator.onLine;
     set({ online });
-    if (!online) {
+    if (!online || __STANDALONE__) {
+      // Wersja jednoplikowa działa bez serwera — zawsze tryb demonstracyjny.
       set({ ai: 'unavailable' });
       return;
     }

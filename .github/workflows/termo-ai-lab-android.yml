@@ -47,6 +47,9 @@ jobs:
           # Opcjonalnie: adres serwera API dla aplikacji mobilnej (zmienna repozytorium TERMO_API_BASE_URL).
           VITE_API_BASE_URL: ${{ vars.TERMO_API_BASE_URL }}
 
+      - name: Wersja jednoplikowa (TERMO-AI-LAB.html)
+        run: npm run build:standalone
+
       - name: Pakiet serwera WWW
         run: npm run package
 
@@ -63,6 +66,12 @@ jobs:
         with:
           name: termo-ai-lab-android-apk
           path: termo-ai-lab/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: termo-ai-lab-jeden-plik
+          path: termo-ai-lab/standalone/TERMO-AI-LAB.html
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4

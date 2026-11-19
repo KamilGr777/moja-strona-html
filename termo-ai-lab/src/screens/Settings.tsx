@@ -1,5 +1,5 @@
-import { Cpu, Download, FlaskConical, Monitor, Share, Smartphone, SquarePlus, Trash2, WifiOff } from 'lucide-react';
-import { useState } from 'react';
+import { Cpu, Download, FlaskConical, Monitor, Share, Smartphone, SquarePlus, Trash2, Upload, WifiOff } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { PageHeader } from '../components/layout/AppShell';
 import { Button, Callout, Card, cx } from '../components/ui';
 import { useConnectivity } from '../lib/connectivity';
@@ -42,6 +42,20 @@ export function Settings() {
     explain: 'Tu zmienisz wygląd (animacje, wielkość tekstu), zainstalujesz aplikację i sprawdzisz, czy ocena korzysta z modelu AI.',
     next: { text: 'Jeśli chcesz mieć aplikację na pulpicie lub ekranie telefonu — skorzystaj z sekcji „Zainstaluj aplikację”.' },
   });
+
+  const importRef = useRef<HTMLInputElement>(null);
+  const importData = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as { state?: { version?: number } };
+      if (!parsed?.state || parsed.state.version !== 1) throw new Error('format');
+      window.localStorage.setItem(STORAGE_KEY, text);
+      await useProgress.persist.rehydrate();
+      toast({ title: 'Wczytano kopię postępów', tone: 'success' });
+    } catch {
+      toast({ title: 'Nie udało się wczytać pliku', text: 'Wybierz plik pobrany przyciskiem „Pobierz kopię postępów”.', tone: 'error' });
+    }
+  };
 
   const exportData = () => {
     try {
@@ -95,11 +109,24 @@ export function Settings() {
         </Card>
 
         <Card data-tour="settings-install">
-          <h2 className="font-display text-lg font-semibold">Zainstaluj aplikację</h2>
+          <h2 className="font-display text-lg font-semibold">{__STANDALONE__ ? 'Wersja w jednym pliku' : 'Zainstaluj aplikację'}</h2>
+          {__STANDALONE__ ? (
+            <div className="mt-2 grid gap-2 text-[0.95rem] text-fg-muted">
+              <p>
+                Korzystasz z wersji, która mieści się w jednym pliku <strong className="text-fg">TERMO-AI-LAB.html</strong>. Nie wymaga instalacji ani Internetu — wystarczy otworzyć plik dwuklikiem.
+              </p>
+              <ul className="grid gap-1">
+                <li>• Zapisz plik w stałym miejscu (np. na pulpicie lub w Dokumentach) i otwieraj go zawsze w tej samej przeglądarce — tam zapisuje się Twój postęp.</li>
+                <li>• Chcesz przenieść postęp na inny komputer? Użyj „Pobierz kopię postępów” i „Wczytaj kopię postępów” poniżej.</li>
+                <li>• Ocena promptów działa tu w trybie demonstracyjnym. Ocena modelem AI wymaga wersji z serwerem (patrz README).</li>
+              </ul>
+            </div>
+          ) : (
           <p className="mt-1 text-[0.95rem] text-fg-muted">
             TERMO AI LAB to aplikacja PWA: instalujesz ją z przeglądarki, bez sklepu z aplikacjami. Działa w osobnym oknie, a lekcje są dostępne także bez Internetu.
           </p>
-          {installed ? (
+          )}
+          {__STANDALONE__ ? null : installed ? (
             <div className="mt-4">
               <Callout tone="ok">Aplikacja jest zainstalowana i działa w trybie samodzielnego okna.</Callout>
             </div>
@@ -115,6 +142,7 @@ export function Settings() {
               Zainstaluj teraz
             </Button>
           ) : null}
+          {!__STANDALONE__ && (
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className={cx('rounded-2xl border p-4', platform === 'desktop' ? 'border-tech/40 bg-tech/[0.05]' : 'border-white/8')}>
               <div className="flex items-center gap-2 font-semibold">
@@ -151,6 +179,7 @@ export function Settings() {
               </ol>
             </div>
           </div>
+          )}
         </Card>
 
         <Card>
@@ -193,6 +222,21 @@ export function Settings() {
             <Button variant="secondary" onClick={exportData} icon={<Download className="size-4" aria-hidden="true" />}>
               Pobierz kopię postępów
             </Button>
+            <Button variant="secondary" onClick={() => importRef.current?.click()} icon={<Upload className="size-4" aria-hidden="true" />}>
+              Wczytaj kopię postępów
+            </Button>
+            <input
+              ref={importRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              aria-label="Plik z kopią postępów"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importData(f);
+                e.target.value = '';
+              }}
+            />
             {!confirmReset ? (
               <Button variant="danger" onClick={() => setConfirmReset(true)} icon={<Trash2 className="size-4" aria-hidden="true" />}>
                 Wyczyść postępy

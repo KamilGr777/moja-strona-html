@@ -6,6 +6,20 @@ Wszystkie teksty interfejsu i treści są po polsku. Wszystkie dane w ćwiczenia
 
 ---
 
+## Najprostszy sposób: jeden plik, bez instalacji
+
+**`TERMO-AI-LAB.html`** to cała aplikacja w jednym pliku (ok. 1,5 MB): kod, wygląd, fonty, wszystkie lekcje i ćwiczenia.
+
+1. Pobierz plik i zapisz go w stałym miejscu (np. na pulpicie).
+2. Kliknij go dwukrotnie — otworzy się w przeglądarce (Edge, Chrome i inne).
+3. Gotowe. Nie potrzeba Internetu, konta ani instalowania programów.
+
+Postęp zapisuje się w przeglądarce, w której otwierasz plik. Przeniesienie na inny komputer: *Ustawienia → Pobierz kopię postępów*, a tam *Wczytaj kopię postępów*. W tej wersji ocena promptów działa w trybie demonstracyjnym (ocena modelem AI wymaga wersji z serwerem — poniżej).
+
+Zbudowanie pliku ze źródeł: `npm run build:standalone` → `standalone/TERMO-AI-LAB.html` (test: `npm run test:standalone`).
+
+---
+
 ## Co zawiera wersja 1.0 (MVP)
 
 | Element | Stan |

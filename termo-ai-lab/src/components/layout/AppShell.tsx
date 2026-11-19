@@ -5,6 +5,7 @@ import { useConnectivity } from '../../lib/connectivity';
 import { navigate, useRoute, type Route } from '../../lib/router';
 import { useProgress } from '../../lib/store';
 import { cx, LevelPill } from '../ui';
+import logoUrl from '../../assets/logo.svg';
 
 const NAV: { route: Route; label: string; short: string; icon: typeof House; match: Route['name'][] }[] = [
   { route: { name: 'dashboard' }, label: 'Start', short: 'Start', icon: House, match: ['dashboard'] },
@@ -60,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Pasek boczny — komputer */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/6 bg-ink-950/60 px-4 py-6 backdrop-blur-xl lg:flex">
         <button type="button" onClick={() => navigate({ name: 'dashboard' })} className="mb-8 flex items-center gap-3 rounded-xl px-2 text-left">
-          <img src="./favicon.svg" alt="" className="size-9" />
+          <img src={logoUrl} alt="" className="size-9" />
           <div>
             <div className="font-display text-[0.95rem] font-bold tracking-wide">TERMO AI LAB</div>
             <div className="text-xs text-fg-muted">Akademia AI</div>
@@ -111,7 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-20 border-b border-white/6 bg-ink-900/70 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
           <button type="button" onClick={() => navigate({ name: 'dashboard' })} className="flex items-center gap-2 lg:hidden" aria-label="TERMO AI LAB — ekran główny">
-            <img src="./favicon.svg" alt="" className="size-7" />
+            <img src={logoUrl} alt="" className="size-7" />
             <span className="font-display text-sm font-bold tracking-wide">TERMO AI LAB</span>
           </button>
           <div className="hidden lg:block" />

@@ -17,11 +17,20 @@ cpSync('server-dist', `${out}/server-dist`, { recursive: true });
 cpSync('.env.example', `${out}/.env.example`);
 cpSync('README.md', `${out}/README.md`);
 cpSync('docs', `${out}/docs`, { recursive: true });
+if (existsSync('standalone/TERMO-AI-LAB.html')) {
+  // Wersja jednoplikowa: obok paczki (do pobrania osobno) i w środku paczki.
+  cpSync('standalone/TERMO-AI-LAB.html', `${out}/TERMO-AI-LAB.html`);
+  cpSync('standalone/TERMO-AI-LAB.html', 'release/TERMO-AI-LAB.html');
+}
 
 writeFileSync(
   `${out}/URUCHOMIENIE.txt`,
   `TERMO AI LAB ${pkg.version} — gotowy pakiet serwera WWW (to NIE jest instalator)
 
+NAJPROŚCIEJ: otwórz dwuklikiem plik TERMO-AI-LAB.html — cała aplikacja w jednym pliku,
+bez instalacji i bez Internetu (ocena promptów w trybie demonstracyjnym).
+
+Wersja z serwerem (instalacja PWA, ocena promptów modelem AI):
 Wymagania: Node.js 20 lub nowszy (https://nodejs.org). Nie trzeba uruchamiać "npm install".
 
 1) Uruchomienie
