@@ -34,6 +34,9 @@ jobs:
           java-version: 21
 
       - uses: android-actions/setup-android@v3
+        with:
+          # Domyślna lista zawiera przestarzały pakiet „tools”, którego nie ma już w SDK.
+          packages: 'platform-tools platforms;android-36'
 
       - name: Instalacja zależności
         run: npm ci
