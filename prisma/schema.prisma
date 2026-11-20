@@ -1,0 +1,582 @@
+// DETAIL REEL AI — model danych
+// Zasada: oryginalne media (MediaAsset), analizy (Analysis*), projekty montażowe
+// (EditingProject + TimelineTrack/TimelineItem/Subtitle) i eksporty (RenderJob/Export)
+// są przechowywane osobno. Projekt montażowy przechowuje wyłącznie referencje do plików
+// źródłowych i przedziały czasu, więc każdy render powstaje z oryginałów.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Użytkownicy i sesje ─────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  passwordHash  String
+  // Ustawienia: retencja danych (dni), domyślna platforma, preferencje UI
+  retentionDays Int      @default(90)
+  settings      Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions        Session[]
+  clients         Client[]
+  projects        Project[]
+  assets          MediaAsset[]
+  brandTemplates  BrandTemplate[]
+  ideas           ContentIdea[]
+  jobs            Job[]
+  usage           UsageEvent[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+
+  @@index([userId])
+}
+
+// ───────────────────────── Klienci (studia detailingowe) ─────────────────────────
+
+model Client {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  logoAssetId        String?
+  location           String?
+  phone              String?
+  instagram          String?
+  website            String?
+  brandColors        String[] @default([])
+  communicationStyle String?
+  targetAudience     String?
+  services           String[] @default([])
+  advantages         String[] @default([])
+  preferredReelStyle String?
+  defaultCta         String?
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  projects       Project[]
+  brandTemplates BrandTemplate[]
+  ideas          ContentIdea[]
+
+  @@index([userId])
+}
+
+// ───────────────────────── Projekty ─────────────────────────
+
+enum ProjectType {
+  ANALYSIS      // analiza gotowej rolki
+  AUTO_MONTAGE  // montaż z surowych nagrań
+  EDIT          // ręczny projekt montażowy
+  IDEA          // projekt utworzony z pomysłu
+}
+
+enum ProjectStatus {
+  DRAFT
+  PROCESSING
+  ANALYZED
+  NEEDS_WORK
+  EDITING
+  RENDERED
+  IN_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+  FAILED
+}
+
+model Project {
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId         String?
+  client           Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name             String
+  type             ProjectType
+  status           ProjectStatus @default(DRAFT)
+  goal             String?
+  platform         String        @default("instagram")
+  service          String?
+  // Ustawienia automatycznego montażu (styl, długość, tempo, cel)
+  montageSettings  Json?
+  // Lista ujęć do nagrania (checklista), np. z pomysłu lub doradcy ujęć
+  shotChecklist    Json?
+  thumbnailAssetId String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  assets          MediaAsset[]
+  clips           VideoClip[]
+  analyses        Analysis[]
+  editingProjects EditingProject[]
+  jobs            Job[]
+  idea            ContentIdea?   @relation("IdeaProject")
+
+  @@index([userId, updatedAt])
+}
+
+// ───────────────────────── Media ─────────────────────────
+
+enum AssetKind {
+  VIDEO
+  AUDIO
+  IMAGE
+}
+
+enum AssetRole {
+  SOURCE_REEL // gotowa rolka do analizy
+  RAW_CLIP    // surowe nagranie do montażu
+  MUSIC       // muzyka (z licencją użytkownika)
+  LOGO        // logo klienta
+  RENDER      // wyrenderowany film
+  THUMBNAIL   // okładka rolki
+}
+
+enum AssetStatus {
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+}
+
+model MediaAsset {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId     String?
+  kind         AssetKind
+  role         AssetRole
+  status       AssetStatus @default(UPLOADED)
+  error        String?
+  originalName String
+  mimeType     String
+  sizeBytes    BigInt
+  sha256       String?
+  storageKey   String      // oryginał — nigdy nie jest modyfikowany
+  proxyKey     String?     // H.264 proxy do odtwarzania w przeglądarce
+  posterKey    String?     // miniatura
+  spriteKey    String?     // pasek miniatur do timeline
+  waveformKey  String?     // obwiednia audio (JSON)
+  durationSec  Float?
+  width        Int?
+  height       Int?
+  fps          Float?
+  rotation     Int?
+  hasAudio     Boolean     @default(false)
+  videoCodec   String?
+  audioCodec   String?
+  bitrate      Int?
+  // Pełne metadane ffprobe + statystyki jakości, sprite meta itd.
+  metadata     Json        @default("{}")
+  // Analiza audio: głośność, cisza, BPM, beaty
+  audioAnalysis Json?
+  // Tagi typu ujęcia nadane przez użytkownika (np. "polerowanie", "efekt")
+  tags         String[]    @default([])
+  // Informacja o licencji (muzyka)
+  license      String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  scenes      Scene[]
+  clips       VideoClip[]
+  analyses    Analysis[]
+
+  @@index([userId, role])
+  @@index([projectId])
+}
+
+// Wykorzystanie pliku wideo w projekcie (np. surowy klip w auto montażu)
+model VideoClip {
+  id            String     @id @default(cuid())
+  projectId     String
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assetId       String
+  asset         MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  order         Int        @default(0)
+  // Kategoria ujęcia (AI lub użytkownik): result, polishing, coating, ...
+  category      String?
+  categorySource String?   // "ai" | "user" | null
+  summary       String?
+  // Ocena przydatności 0–100 (AI lub heurystyka)
+  score         Float?
+  scoreSource   String?
+  analysis      Json?
+  createdAt     DateTime   @default(now())
+
+  @@unique([projectId, assetId])
+}
+
+model Scene {
+  id            String     @id @default(cuid())
+  assetId       String
+  asset         MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  index         Int
+  start         Float
+  end           Float
+  // Metryki techniczne (heurystyka): ruch, jasność, ostrość, nasycenie
+  motion        Float?
+  brightness    Float?
+  sharpness     Float?
+  saturation    Float?
+  frameKey      String?
+  // Wyniki AI (jeśli skonfigurowano): opis, kategoria, oceny
+  description   String?
+  category      String?
+  interestScore Float?
+  qualityScore  Float?
+  hookPotential Float?
+  aiData        Json?
+
+  @@unique([assetId, index])
+}
+
+// ───────────────────────── Analiza ─────────────────────────
+
+enum AnalysisMode {
+  AI        // pełna analiza multimodalna (model AI + pipeline techniczny)
+  HEURISTIC // wyłącznie pomiary techniczne (bez modelu AI) — wyraźnie oznaczone w UI
+}
+
+enum AnalysisStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Analysis {
+  id               String         @id @default(cuid())
+  projectId        String
+  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assetId          String
+  asset            MediaAsset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  // Ponowna ocena po poprawkach wskazuje analizę oryginału
+  parentAnalysisId String?
+  status           AnalysisStatus @default(QUEUED)
+  mode             AnalysisMode   @default(HEURISTIC)
+  model            String?
+  goal             String?
+  platform         String?
+  service          String?
+  totalScore       Float?
+  summary          String?
+  strengths        String[]       @default([])
+  weaknesses       String[]       @default([])
+  priorityFixes    String[]       @default([])
+  optimalLengthSec Float?
+  optimalLengthNote String?
+  // Odpowiedzi na 13 kluczowych pytań
+  questions        Json?
+  hooks            Json?
+  missingShots     Json?
+  musicAdvice      Json?
+  retention        Json?
+  captionIdeas     Json?
+  transcript       Json?
+  onScreenText     Json?
+  technical        Json?
+  warnings         String[]       @default([])
+  error            String?
+  createdAt        DateTime       @default(now())
+  completedAt      DateTime?
+
+  findings   AnalysisFinding[]
+  categories ScoreCategory[]
+
+  @@index([projectId, createdAt])
+}
+
+enum FindingSeverity {
+  GOOD
+  WARN
+  BAD
+}
+
+model AnalysisFinding {
+  id               String          @id @default(cuid())
+  analysisId       String
+  analysis         Analysis        @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  start            Float
+  end              Float
+  severity         FindingSeverity
+  category         String
+  shotDescription  String
+  problem          String?
+  reason           String?
+  suggestion       String
+  suggestedCaption String?
+  newShotDuration  Float?
+  priority         Int             @default(3) // 1 = najwyższy
+  source           String          @default("heuristic") // "ai" | "heuristic"
+
+  @@index([analysisId, start])
+}
+
+model ScoreCategory {
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  key        String   // hook | visual | clarity | pacing | cta | captions
+  label      String
+  score      Float?   // null = brak danych do oceny
+  maxScore   Float
+  rationale  String
+  basis      String   // "ai" | "heuristic" | "unavailable"
+
+  @@unique([analysisId, key])
+}
+
+// ───────────────────────── Montaż ─────────────────────────
+
+model EditingProject {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  // VIRAL | PREMIUM | SALES | FIXED | MANUAL | AUTO
+  variant     String   @default("MANUAL")
+  // Ustawienia projektu: rozdzielczość, fps, platforma, styl napisów, wyciszenie audio
+  settings    Json
+  // Opis zmian / uzasadnienie (np. lista poprawek z "Popraw rolkę")
+  changelog   Json?
+  notes       String?
+  revision    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tracks     TimelineTrack[]
+  subtitles  Subtitle[]
+  renderJobs RenderJob[]
+  exports    Export[]
+}
+
+enum TrackType {
+  VIDEO
+  AUDIO
+  TEXT
+  LOGO
+  EFFECT // np. rozmycie obszaru (tablice rejestracyjne, twarze)
+}
+
+model TimelineTrack {
+  id               String         @id @default(cuid())
+  editingProjectId String
+  editingProject   EditingProject @relation(fields: [editingProjectId], references: [id], onDelete: Cascade)
+  type             TrackType
+  order            Int
+  muted            Boolean        @default(false)
+
+  items TimelineItem[]
+}
+
+model TimelineItem {
+  id        String        @id // generowane po stronie klienta (stabilne dla undo/redo)
+  trackId   String
+  track     TimelineTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  order     Int
+  assetId   String?
+  // Pozycja na osi czasu (dla ścieżek nie-magnetycznych)
+  start     Float         @default(0)
+  // Zakres w materiale źródłowym (sekundy)
+  sourceIn  Float         @default(0)
+  sourceOut Float         @default(0)
+  speed     Float         @default(1)
+  volume    Float         @default(1)
+  fadeIn    Float         @default(0)
+  fadeOut   Float         @default(0)
+  // Pozostałe właściwości: kadrowanie, przejście, pozycja logo, rozmycie obszaru
+  props     Json          @default("{}")
+}
+
+model Subtitle {
+  id               String         @id // generowane po stronie klienta
+  editingProjectId String
+  editingProject   EditingProject @relation(fields: [editingProjectId], references: [id], onDelete: Cascade)
+  order            Int
+  kind             String         // transcript | caption | cta | title
+  start            Float
+  end              Float
+  text             String
+  // Słowa z czasami (podświetlanie aktualnie wypowiadanego słowa)
+  words            Json?
+  style            Json
+  position         Json
+  animation        String         @default("fade")
+}
+
+model BrandTemplate {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name       String
+  colors     String[] @default([])
+  fontFamily String?
+  captionPreset String?
+  captionStyle Json?
+  animation  String?
+  endCardText String?
+  cta        String?
+  logoAssetId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ───────────────────────── Render i eksport ─────────────────────────
+
+enum RenderStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model RenderJob {
+  id               String         @id @default(cuid())
+  editingProjectId String
+  editingProject   EditingProject @relation(fields: [editingProjectId], references: [id], onDelete: Cascade)
+  status           RenderStatus   @default(QUEUED)
+  progress         Float          @default(0)
+  // Migawka timeline w chwili zlecenia renderu (powtarzalność)
+  snapshot         Json
+  options          Json
+  outputAssetId    String?
+  error            String?
+  log              String?
+  createdAt        DateTime       @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+
+  export Export?
+}
+
+model Export {
+  id               String         @id @default(cuid())
+  editingProjectId String
+  editingProject   EditingProject @relation(fields: [editingProjectId], references: [id], onDelete: Cascade)
+  renderJobId      String         @unique
+  renderJob        RenderJob      @relation(fields: [renderJobId], references: [id], onDelete: Cascade)
+  assetId          String
+  platform         String
+  width            Int
+  height           Int
+  fps              Float
+  durationSec      Float
+  sizeBytes        BigInt
+  burnedSubtitles  Boolean
+  withLogo         Boolean
+  srtKey           String?
+  // Checklista przed publikacją (wynik automatycznych sprawdzeń)
+  checklist        Json?
+  // Udostępnianie klientowi (hash tokenu — sam token nie jest przechowywany)
+  shareTokenHash   String?        @unique
+  shareExpiresAt   DateTime?
+  reviewStatus     String?        // pending | approved | changes_requested
+  reviewedAt       DateTime?
+  createdAt        DateTime       @default(now())
+
+  comments ClientComment[]
+}
+
+model ClientComment {
+  id         String   @id @default(cuid())
+  exportId   String
+  export     Export   @relation(fields: [exportId], references: [id], onDelete: Cascade)
+  authorName String
+  timeSec    Float?
+  body       String
+  kind       String   @default("comment") // comment | approval | changes
+  createdAt  DateTime @default(now())
+
+  @@index([exportId, createdAt])
+}
+
+// ───────────────────────── Pomysły ─────────────────────────
+
+model ContentIdea {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId   String?  @unique
+  project     Project? @relation("IdeaProject", fields: [projectId], references: [id], onDelete: SetNull)
+  title       String
+  hook        String
+  service     String?
+  goal        String?
+  style       String?
+  durationSec Float?
+  data        Json     // scenariusz, shot list, napisy, ruch kamery, muzyka
+  source      String   // "ai" | "template"
+  saved       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ───────────────────────── Zadania w tle ─────────────────────────
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId       String?
+  project         Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type            String    // ingest | analyze | clips | render | cleanup
+  status          JobStatus @default(QUEUED)
+  progress        Float     @default(0)
+  stage           String?
+  payload         Json
+  result          Json?
+  error           String?
+  attempts        Int       @default(0)
+  cancelRequested Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
+
+  @@index([userId, createdAt])
+  @@index([projectId])
+}
+
+// Limity użycia (np. zapytania AI)
+model UsageEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   // ai_analysis | ai_chat | ai_ideas | transcription | render
+  units     Int      @default(1)
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+}
