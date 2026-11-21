@@ -1,0 +1,1607 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="DETAIL REEL AI — analiza i montaż rolek car detailing w przeglądarce.">
+<title>DETAIL REEL AI Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Anton&family=Poppins:wght@500;600;800&family=Montserrat:wght@600;700;800&family=Playfair+Display:wght@400;600&family=Cinzel:wght@400;600&display=swap">
+<style>
+  *,*::before,*::after{box-sizing:border-box} body{margin:0}
+  /* Układ: pasek aplikacji + jeden widok roboczy naraz (start → analiza → raport → studio montażu).
+     Świadomie jeden ciemny motyw — jak w aplikacji do montażu wideo. */
+  :root {
+    --bg: #08090c; --surface: #111419; --surface-2: #171b22; --surface-3: #20252f;
+    --line: #242a35; --line-2: #313847;
+    --fg: #e8eaf0; --muted: #9aa2b2; --subtle: #6d7587;
+    --accent: #4d86ff; --accent-2: #22d3ee; --good: #2fd27a; --warn: #f5b638; --bad: #f04b5c;
+    --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .wrap { max-width: 1360px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: rgba(17, 20, 25, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.12em; font-size: 13px; }
+  .brand small { display: block; font-size: 9px; letter-spacing: 0.3em; color: var(--accent-2); font-weight: 600; }
+  .brand svg { width: 30px; height: 30px; flex: none; }
+  .tabs { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+  .tabs button { border: 0; background: transparent; color: var(--muted); padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; }
+  .tabs button[aria-pressed="true"] { background: var(--surface-3); color: var(--fg); }
+  .pill { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--subtle); display: inline-block; }
+  .pill.on { border-color: rgba(77,134,255,0.4); color: #a9c4ff; }
+  .pill.on i { background: var(--accent); }
+  .pill.off { border-color: rgba(245,182,56,0.35); color: var(--warn); }
+  .pill.off i { background: var(--warn); }
+
+  main { padding-block: 24px 64px; }
+  .view[hidden] { display: none !important; }
+  h1 { font-family: var(--font-display); font-size: clamp(1.6rem, 3.4vw, 2.3rem); line-height: 1.1; letter-spacing: -0.015em; margin: 0 0 8px; text-wrap: balance; }
+  h2 { font-family: var(--font-display); font-size: 1.15rem; margin: 0 0 12px; letter-spacing: -0.01em; }
+  h3 { font-size: 0.95rem; margin: 0 0 10px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-2); }
+  .lede { color: var(--muted); max-width: 70ch; margin: 0 0 20px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
+  .grid { display: grid; gap: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .muted { color: var(--muted); }
+  .subtle { color: var(--subtle); font-size: 12px; }
+  .tab-num { font-variant-numeric: tabular-nums; }
+
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  label.f { display: grid; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 500; }
+  select, input[type="text"], input[type="number"], textarea { background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; min-width: 0; width: 100%; }
+  textarea { resize: vertical; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg); }
+  .check input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); padding: 9px 14px; font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .btn:hover:not(:disabled) { border-color: var(--line-2); background: var(--surface-3); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
+  .btn.glow { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; box-shadow: 0 10px 30px -10px rgba(77,134,255,0.7); font-size: 14px; padding: 11px 18px; letter-spacing: 0.02em; }
+  .btn.sm { padding: 5px 9px; font-size: 12px; border-radius: 8px; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  .btn.ghost:hover:not(:disabled) { color: var(--fg); background: var(--surface-2); }
+
+  .drop { border: 1.5px dashed var(--line-2); border-radius: 16px; padding: 34px 18px; text-align: center; background: rgba(23, 27, 34, 0.5); transition: border-color 0.15s, background 0.15s; cursor: pointer; }
+  .drop.over, .drop:hover { border-color: var(--accent); background: rgba(77, 134, 255, 0.06); }
+  .drop b { display: block; font-size: 15px; margin-bottom: 4px; }
+  .filelist { display: grid; gap: 6px; margin-top: 12px; }
+  .fileitem { display: flex; gap: 10px; align-items: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; font-size: 13px; min-width: 0; }
+  .fileitem span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .notice { border-radius: 12px; padding: 11px 14px; font-size: 13px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); }
+  .notice.warn { border-color: rgba(245,182,56,0.35); background: rgba(245,182,56,0.07); color: #f3d38c; }
+  .notice.info { border-color: rgba(77,134,255,0.35); background: rgba(77,134,255,0.07); color: #b6cdff; }
+  .notice.bad { border-color: rgba(240,75,92,0.4); background: rgba(240,75,92,0.08); color: #ff9aa5; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--line); background: var(--surface-3); color: var(--muted); white-space: nowrap; }
+  .badge.good { color: var(--good); border-color: rgba(47,210,122,0.35); background: rgba(47,210,122,0.1); }
+  .badge.warn { color: var(--warn); border-color: rgba(245,182,56,0.35); background: rgba(245,182,56,0.1); }
+  .badge.bad { color: var(--bad); border-color: rgba(240,75,92,0.35); background: rgba(240,75,92,0.1); }
+  .badge.ai { color: #a9c4ff; border-color: rgba(77,134,255,0.35); background: rgba(77,134,255,0.12); }
+
+  /* Postęp */
+  .steps { display: grid; gap: 8px; margin-top: 16px; }
+  .step-row { display: flex; gap: 10px; align-items: center; color: var(--subtle); font-size: 13px; }
+  .step-row .dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line-2); flex: none; display: grid; place-items: center; font-size: 10px; }
+  .step-row.active { color: var(--fg); }
+  .step-row.active .dot { border-color: var(--accent); border-top-color: transparent; animation: spin 0.9s linear infinite; }
+  .step-row.done { color: var(--muted); }
+  .step-row.done .dot { background: var(--good); border-color: var(--good); color: #062; }
+  .step-row.skip .dot { border-style: dashed; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .bar { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.3s; border-radius: 99px; }
+
+  /* Raport */
+  .report-grid { display: grid; grid-template-columns: minmax(280px, 400px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .sticky { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 70px); display: grid; gap: 16px; }
+  .player { width: 100%; max-height: 62vh; border-radius: 12px; background: #000; display: block; }
+  .tl { position: relative; height: 26px; border-radius: 6px; background: var(--surface-2); cursor: pointer; overflow: hidden; }
+  .tl .sc { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line-2); font-size: 9px; color: var(--subtle); padding: 2px 3px; }
+  .tl .sc:nth-child(even) { background: rgba(255,255,255,0.025); }
+  .tl .ph { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; box-shadow: 0 0 6px #fff; pointer-events: none; }
+  .lanes { display: grid; gap: 3px; margin-top: 5px; }
+  .lane { position: relative; height: 10px; }
+  .lane button { position: absolute; top: 0; bottom: 0; border: 0; border-radius: 3px; padding: 0; min-width: 6px; opacity: 0.9; }
+  .lane button.GOOD { background: var(--good); } .lane button.WARN { background: var(--warn); } .lane button.BAD { background: var(--bad); }
+  .lane button.sel { outline: 2px solid #fff; }
+  .ticks { position: relative; height: 14px; font-size: 10px; color: var(--subtle); margin-top: 3px; }
+  .ticks span { position: absolute; transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+
+  .rtabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
+  .rtabs button { border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); border-radius: 9px; padding: 6px 11px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .rtabs button[aria-selected="true"] { background: var(--surface-3); color: var(--fg); border-color: var(--line-2); }
+  .gauge-row { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+  .gauge { position: relative; width: 150px; height: 150px; flex: none; }
+  .gauge .num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .gauge .num b { font-family: var(--font-display); font-size: 42px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .gauge .num span { font-size: 11px; color: var(--subtle); }
+  .cat { display: grid; gap: 6px; padding-block: 10px; border-bottom: 1px solid var(--line); }
+  .cat:last-child { border-bottom: 0; }
+  .cat .h { display: flex; justify-content: space-between; gap: 10px; font-weight: 600; }
+  .cat p { margin: 0; font-size: 12px; color: var(--muted); }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); }
+  ol.fixes { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: f; }
+  ol.fixes li { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 10px; counter-increment: f; }
+  ol.fixes li::before { content: counter(f); width: 24px; height: 24px; border-radius: 50%; background: rgba(77,134,255,0.15); color: var(--accent); font-weight: 700; font-size: 12px; display: grid; place-items: center; }
+  .finding { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .finding.sel { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(77,134,255,0.4); }
+  .finding .ic { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; }
+  .finding dl { margin: 10px 0 0; display: grid; gap: 7px; }
+  .finding dt { font-size: 11px; color: var(--subtle); }
+  .finding dd { margin: 0; }
+  .finding .sug { border: 1px solid rgba(77,134,255,0.3); background: rgba(77,134,255,0.07); border-radius: 9px; padding: 8px 10px; }
+  .tcbtn { border: 0; background: var(--surface-3); border-radius: 6px; padding: 2px 8px; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .tcbtn:hover { background: rgba(77,134,255,0.25); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+  .kv { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 4px 10px; font-size: 12px; margin: 10px 0 0; }
+  .kv dt { color: var(--subtle); } .kv dd { margin: 0; }
+  .tech { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 20px; }
+  .tech div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .tech div span:last-child { font-variant-numeric: tabular-nums; }
+  .scenes { display: grid; gap: 6px; }
+  .scene { display: grid; grid-template-columns: 40px auto minmax(0,1fr) auto; gap: 10px; align-items: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 6px; font-size: 13px; }
+  .scene img { width: 40px; height: 56px; object-fit: cover; border-radius: 5px; background: #000; }
+  .ret svg { width: 100%; height: 140px; display: block; cursor: crosshair; }
+  .seglist { display: grid; gap: 4px; margin-top: 10px; }
+  .seglist button { display: flex; gap: 8px; align-items: flex-start; text-align: left; border: 0; background: transparent; padding: 4px 6px; border-radius: 6px; font-size: 12px; color: var(--muted); }
+  .seglist button:hover { background: var(--surface-2); }
+  .seglist i { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
+
+  /* Studio */
+  .studio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: 20px; align-items: start; }
+  .stage { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .screen { display: grid; gap: 8px; justify-items: center; }
+  .screen canvas, .screen video { width: min(300px, 80vw); aspect-ratio: 9 / 16; border-radius: 14px; background: #000; display: block; box-shadow: 0 30px 60px -30px rgba(0,0,0,0.9); border: 1px solid var(--line); object-fit: contain; }
+  .controls { display: flex; gap: 8px; align-items: center; width: min(300px, 80vw); }
+  .controls input { flex: 1; }
+  .score-chip { font-family: var(--font-mono); font-weight: 500; font-size: 13px; padding: 2px 8px; border-radius: 7px; border: 1px solid var(--line); }
+  .variant-tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+  .variant-tabs button { border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); border-radius: 10px; padding: 7px 12px; font-weight: 600; font-size: 12px; text-align: left; }
+  .variant-tabs button small { display: block; font-weight: 400; color: var(--subtle); font-size: 11px; }
+  .variant-tabs button[aria-pressed="true"] { border-color: var(--accent); background: rgba(77,134,255,0.1); color: var(--fg); }
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.cmp th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--subtle); font-weight: 600; padding-bottom: 6px; }
+  table.cmp td { padding: 7px 8px 7px 0; border-top: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+  .segs { display: grid; gap: 6px; }
+  .seg { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 8px; align-items: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 6px; }
+  .seg img { width: 34px; height: 48px; object-fit: cover; border-radius: 5px; background: #000; }
+  .seg .lbl { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seg .io { display: flex; gap: 4px; align-items: center; margin-top: 4px; font-size: 11px; color: var(--subtle); }
+  .seg .io input { width: 66px; padding: 3px 6px; font-size: 12px; }
+  .seg .acts { display: flex; gap: 2px; }
+  .caps { display: grid; gap: 6px; }
+  .capr { display: grid; grid-template-columns: minmax(0,1fr) 62px 62px auto; gap: 6px; align-items: center; }
+  .capr input { padding: 6px 8px; font-size: 12px; }
+  details.panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  details.panel > summary { cursor: pointer; padding: 12px 14px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+  details.panel > summary::after { content: "▾"; color: var(--subtle); }
+  details.panel[open] > summary::after { content: "▴"; }
+  details.panel > div { padding: 0 14px 14px; display: grid; gap: 10px; }
+  .export-res video { width: 100%; max-height: 360px; border-radius: 10px; background: #000; }
+
+  @media (max-width: 980px) {
+    .report-grid, .studio { grid-template-columns: minmax(0, 1fr); }
+    .sticky { position: static; }
+  }
+  @media (max-width: 640px) {
+    .top { position: relative; top: 0; }
+    .top .wrap { gap: 8px; }
+    .pill { margin-left: 0; }
+    .tabs { order: 3; width: 100%; }
+    .tabs button { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) { .step-row.active .dot { animation: none; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lgx" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4d86ff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#171b22" stroke="#242a35"/><path d="M18 44V20h12c8 0 14 5 14 12s-6 12-14 12H18z" fill="none" stroke="url(#lgx)" stroke-width="5" stroke-linejoin="round"/><path d="M27 27l9 5-9 5z" fill="url(#lgx)"/></svg>
+      <div>DETAIL REEL<small>AI STUDIO</small></div>
+    </div>
+    <nav class="tabs" aria-label="Tryb pracy">
+      <button type="button" id="nav-analysis" aria-pressed="true">Analiza rolki</button>
+      <button type="button" id="nav-montage" aria-pressed="false">AI Auto Montaż</button>
+    </nav>
+    <span class="pill" id="ai-pill"><i></i><span>Sprawdzam AI…</span></span>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- START: analiza -->
+  <section class="view" id="v-analysis">
+    <p class="eyebrow">Analiza AI</p>
+    <h1>Przeanalizuj gotową rolkę</h1>
+    <p class="lede">Wgraj film, a dostaniesz ocenę 0–100 z uwagami przypiętymi do konkretnych sekund, propozycje hooków, ujęć i napisów. Potem jednym kliknięciem zrobisz poprawioną wersję i zapiszesz ją jako plik wideo. Film zostaje na Twoim urządzeniu; do AI trafiają tylko pojedyncze klatki.</p>
+    <div class="card grid">
+      <div class="fields">
+        <label class="f">Cel rolki<select id="a-goal"></select></label>
+        <label class="f">Platforma<select id="a-platform"></select></label>
+        <label class="f">Usługa<select id="a-service"></select></label>
+        <label class="f">Twoje CTA (opcjonalnie)<input type="text" id="a-cta" maxlength="60" placeholder="np. Umów konsultację"></label>
+      </div>
+      <div class="drop" id="a-drop" tabindex="0" role="button" aria-label="Wybierz film">
+        <b>Przeciągnij rolkę tutaj lub kliknij, aby wybrać</b>
+        <span class="subtle">MP4, MOV, WebM · najlepiej pionowo 9:16 · do kilku minut</span>
+        <input type="file" id="a-file" accept="video/*" hidden>
+      </div>
+      <div class="filelist" id="a-filelist"></div>
+      <label class="check"><input type="checkbox" id="a-ai" checked> Użyj oceny AI (Claude na Twoim koncie — poprosi o zgodę przy pierwszym użyciu)</label>
+      <div class="row"><button class="btn glow" id="a-start" disabled>Analizuj rolkę</button><span class="subtle" id="a-hint">Najpierw wybierz plik.</span></div>
+    </div>
+    <p class="subtle" style="margin-top:14px">Ocena to ekspercka prognoza jakości kreatywnej, nie gwarancja wyświetleń ani sprzedaży.</p>
+  </section>
+
+  <!-- START: auto montaż -->
+  <section class="view" id="v-montage" hidden>
+    <p class="eyebrow">AI Auto Montaż</p>
+    <h1>Zrób rolkę z surowych nagrań</h1>
+    <p class="lede">Wgraj kilka klipów (polerowanie, mycie, wnętrze, gotowe auto…). Każdy zostanie przeanalizowany, najlepsze momenty trafią do historii: hook, proces, detale, efekt, CTA. Dostaniesz trzy wersje do porównania: Viral, Premium i Sales.</p>
+    <div class="card grid">
+      <div class="fields">
+        <label class="f">Usługa<select id="m-service"></select></label>
+        <label class="f">Platforma<select id="m-platform"></select></label>
+        <label class="f">Docelowa długość<select id="m-duration"><option value="13">10–15 s</option><option value="18" selected>15–20 s</option><option value="25">20–30 s</option><option value="38">30–45 s</option></select></label>
+        <label class="f">Twoje CTA (opcjonalnie)<input type="text" id="m-cta" maxlength="60" placeholder="np. Umów termin już dziś"></label>
+      </div>
+      <div class="drop" id="m-drop" tabindex="0" role="button" aria-label="Wybierz klipy">
+        <b>Przeciągnij klipy tutaj lub kliknij, aby wybrać (wiele naraz)</b>
+        <span class="subtle">Kolejność plików = kolejność procesu, jeśli AI nie rozpozna ujęć</span>
+        <input type="file" id="m-file" accept="video/*" multiple hidden>
+      </div>
+      <div class="filelist" id="m-filelist"></div>
+      <div class="fields">
+        <label class="f">Muzyka (opcjonalnie, legalny utwór)<input type="file" id="m-music" accept="audio/*"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="m-ai" checked> Rozpoznaj ujęcia i napisz napisy z AI (Claude na Twoim koncie)</label>
+      <div class="row"><button class="btn glow" id="m-start" disabled>Generuj montaż</button><span class="subtle" id="m-hint">Dodaj co najmniej 2 klipy.</span></div>
+    </div>
+  </section>
+
+  <!-- POSTĘP -->
+  <section class="view" id="v-progress" hidden>
+    <div style="max-width:560px;margin:30px auto">
+      <p class="eyebrow">Przetwarzanie</p>
+      <h1 id="p-title">Analiza rolki</h1>
+      <div class="bar" style="margin-top:14px"><div id="p-bar"></div></div>
+      <p class="subtle" id="p-detail" style="margin-top:8px">Start…</p>
+      <div class="steps" id="p-steps"></div>
+      <div class="row" style="margin-top:18px"><button class="btn" id="p-cancel">Anuluj</button></div>
+    </div>
+  </section>
+
+  <!-- RAPORT -->
+  <section class="view" id="v-report" hidden></section>
+
+  <!-- STUDIO -->
+  <section class="view" id="v-studio" hidden></section>
+</main>
+
+<script>
+"use strict";
+/* ═════════════ Pomocnicze ═════════════ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+const median = (a) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const round = (v, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
+const pl = (v, d = 1) => Number(v).toFixed(d).replace(".", ",");
+const tc = (sec, tenths = true) => { sec = Math.max(0, sec || 0); const m = Math.floor(sec / 60), s = Math.floor(sec % 60); const b = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`; return tenths ? `${b}.${Math.floor((sec * 10) % 10)}` : b; };
+const uid = (p = "x") => `${p}${Math.random().toString(36).slice(2, 9)}`;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+class Cancelled extends Error { constructor() { super("Anulowano"); } }
+
+/* ═════════════ Słownik domeny ═════════════ */
+const GOALS = { leads: "Pozyskanie nowych klientów", service: "Prezentacja usługi", prestige: "Budowanie prestiżu marki", engagement: "Zwiększenie zaangażowania", before_after: "Pokazanie efektu przed i po", education: "Edukacja odbiorcy", promo: "Reklama konkretnej promocji" };
+const PLATFORMS = {
+  instagram: { label: "Instagram Reels", rec: [12, 30], safe: { top: 220, bottom: 420, left: 60, right: 140 } },
+  tiktok: { label: "TikTok", rec: [10, 30], safe: { top: 160, bottom: 480, left: 60, right: 150 } },
+  youtube: { label: "YouTube Shorts", rec: [15, 40], safe: { top: 200, bottom: 380, left: 60, right: 130 } },
+};
+const SERVICES = { ceramic: "Powłoka ceramiczna", correction: "Korekta lakieru", ppf: "Folia PPF", interior: "Detailing wnętrza", wash: "Mycie detailingowe", other: "Inna" };
+const SHOTS = { result: "Gotowy samochód / efekt", before: "Stan przed", polishing: "Polerowanie / korekta", coating: "Aplikacja powłoki", ppf: "Aplikacja folii PPF", washing: "Mycie / piana", decon: "Dekontaminacja", interior: "Wnętrze", upholstery: "Pranie tapicerki", detail: "Zbliżenie detalu", wheels: "Felgi", water: "Efekt hydrofobowy", worker: "Detailer przy pracy", reveal: "Przejazd wokół auta", studio: "Studio / stanowisko", other: "Inne" };
+const CAT_MAX = { hook: 25, visual: 20, clarity: 15, pacing: 15, cta: 15, captions: 10 };
+const CAT_LABEL = { hook: "Hook — pierwsze sekundy", visual: "Jakość i atrakcyjność ujęć", clarity: "Czytelność przekazu", pacing: "Tempo i dynamika montażu", cta: "Zachęta do działania (CTA)", captions: "Napisy i czytelność komunikacji" };
+const GOAL_LEN = { leads: [15, 25], service: [15, 25], prestige: [18, 30], engagement: [10, 18], before_after: [10, 20], education: [25, 40], promo: [12, 20] };
+const QUESTIONS = ["Czy ta rolka przyciągnie uwagę potencjalnego klienta?", "Czy pierwsze 2–3 sekundy są interesujące?", "Czy film pokazuje wartość wykonywanej usługi?", "Czy odbiorca rozumie, co jest reklamowane?", "Czy montaż jest dynamiczny?", "Czy długość rolki jest odpowiednia?", "Czy kolejność ujęć ma sens?", "Czy muzyka pasuje do klimatu filmu?", "Czy napisy są dobrze dobrane?", "Czy film zachęca do kontaktu ze studiem detailingowym?", "Które fragmenty należy skrócić lub usunąć?", "Jakich ujęć brakuje?", "Co konkretnie zmienić, żeby poprawić materiał?"];
+const HOOK_TYPES = { wow: "Efekt WOW", problem: "Problem → rozwiązanie", curiosity: "Ciekawość", premium: "Premium / luksus", educational: "Edukacyjny" };
+const CTA_WORDS = ["umów", "umow", "zadzwoń", "napisz", "rezerw", "link w bio", "kontakt", "wiadomość", "zapraszamy", "zapytaj", "konsultac", "termin"];
+const HOOKS = {
+  correction: [["wow", "Ten efekt robi ogromną różnicę.", "Odbicie światła w lakierze po korekcie"], ["problem", "Myślisz, że ten lakier jest w dobrym stanie?", "Mikrorysy pod lampą"], ["curiosity", "Zobacz, co kryje się pod tymi rysami.", "Efekt 50/50 pod lampą"], ["premium", "Tak wygląda lakier po profesjonalnej korekcie.", "Powolny przejazd wzdłuż karoserii"], ["educational", "Nie każde mycie usunie takie ślady.", "Swirle w świetle lampy"]],
+  ceramic: [["wow", "Zobacz efekt hydrofobowy z bliska.", "Krople spływające z maski"], ["problem", "Lakier matowieje po każdym sezonie?", "Matowy lakier przed zabezpieczeniem"], ["curiosity", "Co daje profesjonalna ochrona lakieru?", "Makro aplikacji powłoki"], ["premium", "Ochrona, którą widać.", "Odbicie światła w lakierze"], ["educational", "Dlaczego właściciele nowych aut zabezpieczają lakier?", "Nowe auto w studiu"]],
+  ppf: [["wow", "Ta folia jest na aucie. Widzisz ją?", "Niewidoczna folia na panelu"], ["problem", "Odpryski na masce po pierwszej trasie?", "Odpryski na przodzie auta"], ["curiosity", "Tak montujemy folię na krawędziach.", "Makro zawijania krawędzi"], ["premium", "Niewidzialna ochrona dla wyjątkowego auta.", "Przejazd wzdłuż karoserii"], ["educational", "Co tak naprawdę chroni folia PPF?", "Rakla na folii"]],
+  interior: [["wow", "Różnica, którą czuć po otwarciu drzwi.", "Czyste wnętrze — szeroki plan"], ["problem", "Plamy na fotelach, które nie schodzą?", "Zabrudzona tapicerka"], ["curiosity", "Zobacz, co wyciągnęliśmy z tego fotela.", "Brudna woda w dyszy ekstraktora"], ["premium", "Wnętrze jak w dniu odbioru z salonu.", "Powolny najazd do wnętrza"], ["educational", "Tak czyścimy miejsca, do których nie sięga odkurzacz.", "Pędzel w kratce nawiewu"]],
+  wash: [["wow", "Ta piana robi robotę.", "Gęsta piana aktywna"], ["problem", "Myjnia automatyczna niszczy lakier?", "Swirle na lakierze"], ["curiosity", "Zobacz, co zostaje na felgach po zwykłym myciu.", "Deironizacja na feldze"], ["premium", "Mycie detailingowe. Bez kompromisów.", "Płukanie w kontrze"], ["educational", "Tak wygląda bezpieczne mycie auta.", "Osuszanie mikrofibrą"]],
+  other: [["wow", "Efekt, który mówi sam za siebie.", "Najlepsze ujęcie gotowego auta"], ["problem", "Twoje auto zasługuje na więcej?", "Stan przed"], ["curiosity", "Zobacz, jak to wygląda od kuchni.", "Detailer przy pracy"], ["premium", "Precyzja w każdym detalu.", "Makro detalu"], ["educational", "Na tym polega profesjonalny detailing.", "Proces z bliska"]],
+};
+const SHOT_GUIDES = {
+  correction: [["Mikrorysy pod lampą (stan przed)", "Hologramy i swirle w świetle lampy inspekcyjnej", "Blisko panelu, lampa i kamera pod podobnym kątem", "Powolne przesuwanie lampy", "6–10 s", "1,5–2,5 s", "Lampa inspekcyjna", "Problem — pierwsze 2–5 s", "Widz musi zobaczyć problem, żeby docenić rozwiązanie."], ["Efekt 50/50", "Panel w połowie po korekcie, granica pod lampą", "Prostopadle do granicy taśmy", "Przesunięcie lampy przez granicę", "6–8 s", "2–2,5 s", "Lampa inspekcyjna", "Przed efektem końcowym", "Najczytelniejszy dowód różnicy — świetny hook."], ["Polerowanie z bliska", "Polerka i pad na panelu", "Z boku, nisko", "Statyw lub powolny najazd", "8–12 s", "1–2 s", "Światło robocze", "Proces", "Dynamiczne ujęcie procesu."], ["Odbicie w lakierze po korekcie", "Lustrzany połysk, ostre odbicia", "Nisko wzdłuż panelu", "Powolny ruch boczny", "6–8 s", "1,5–2 s", "Liniowe lampy LED", "Hook lub finał", "Pokazuje odzyskaną głębię koloru."], ["Finalny przejazd wokół auta", "Gotowe auto w całości", "Na wysokości reflektorów, 3/4", "Orbita 90–180°", "8–12 s", "1,5–3 s", "Rozproszone światło", "Hook i finał", "Efekt całego auta — najmocniejszy argument."]],
+  ceramic: [["Makro aplikacji powłoki", "Aplikator i tęczowa warstwa produktu", "20–40 cm, pod kątem 30°", "Ruch równoległy do aplikatora", "6–10 s", "1,5–2 s", "Lampa z boku", "Proces", "Pokazuje precyzję procesu."], ["Odbicie światła w lakierze", "Lustrzane odbicie lamp studia", "Nisko wzdłuż panelu", "Powolny ruch boczny", "6–8 s", "1,5–2 s", "Liniowe LED", "Hook lub efekt", "Połysk to najbardziej widoczna korzyść."], ["Efekt hydrofobowy", "Woda zraszana na maskę, krople spływają", "Bliskie ujęcie maski, 30–45°", "Delikatny ruch boczny, slow motion", "5–8 s", "1,5–2 s", "Kontra zza kropli", "Po procesie", "Wizualny dowód działania zabezpieczenia."], ["Zbliżenie na felgi", "Czysta felga i opona", "Nisko, 30°", "Powolny najazd", "5–8 s", "1–1,5 s", "Boczne światło", "Detale przed finałem", "Detale świadczą o kompleksowości."], ["Detailer przy pracy", "Ręce i narzędzie w kadrze", "Zza ramienia", "Statyw lub powolny najazd", "6–10 s", "1–2 s", "Światło robocze + kontra", "Proces", "Buduje zaufanie."]],
+  ppf: [["Rakla wypychająca płyn", "Ruch rakli po folii", "Makro przy krawędzi rakli", "Kamera podąża za raklą", "6–8 s", "1–1,5 s", "Światło z boku", "Proces, pod beat", "Ujęcia „oddly satisfying” podnoszą zaangażowanie."], ["Zawijanie krawędzi", "Precyzyjne zawinięcie folii", "Makro", "Statyw", "5–8 s", "1–1,5 s", "Punktowe", "Detale", "Krawędzie to dowód jakości montażu."], ["Niewidoczna folia na aucie", "Panel z folią, której nie widać", "Wzdłuż panelu", "Powolny ruch boczny", "6–8 s", "1,5–2 s", "Liniowe LED", "Finał", "Ochrona bez zmiany wyglądu auta."], ["Finalny przejazd wokół auta", "Gotowe auto w całości", "3/4, nisko", "Orbita", "8–12 s", "1,5–3 s", "Rozproszone", "Hook i finał", "Efekt całego auta."]],
+  interior: [["Wnętrze przed", "Zabrudzenia foteli i dywaników", "Szeroko + zbliżenia", "Statyw", "6–8 s", "1–1,5 s", "Neutralne", "Początek", "Kontrast przed/po."], ["Pranie ekstrakcyjne", "Brudna woda w dyszy", "Makro dyszy", "Statyw", "6–8 s", "1–1,5 s", "Z przodu", "Proces", "Bardzo czytelne ujęcie procesu."], ["Pędzel w detalach", "Kratki nawiewu, przeszycia", "Makro", "Bardzo powolny najazd", "5–8 s", "1 s", "Punktowe", "Detale", "Pokazuje dokładność."], ["Wnętrze po — szeroki plan", "Czyste wnętrze z drzwi kierowcy", "Szeroko", "Powolny najazd", "6–10 s", "2 s", "Miękkie", "Finał", "Rezultat zrozumiały od razu."]],
+  wash: [["Piana aktywna", "Gęsta piana spływająca po karoserii", "Nisko, z boku", "Statyw, slow motion", "8–10 s", "1,5–2 s", "Kontra", "Początek procesu", "Atrakcyjne, rozpoznawalne ujęcie."], ["Deironizacja", "Fioletowy preparat na feldze", "Zbliżenie", "Statyw", "5–8 s", "1,5 s", "Rozproszone", "Proces", "Głębsze czyszczenie niż myjnia."], ["Osuszanie mikrofibrą", "Miękki ręcznik na lakierze", "Półzbliżenie", "Podążanie za ręcznikiem", "5–8 s", "1 s", "Rozproszone", "Przed finałem", "Bezpieczna metoda."], ["Finalny przejazd wokół auta", "Gotowe auto w całości", "3/4, nisko", "Orbita", "8–12 s", "1,5–3 s", "Rozproszone", "Finał", "Efekt końcowy."]],
+  other: [["Finalny przejazd wokół auta", "Gotowe auto w całości", "3/4, nisko", "Orbita", "8–12 s", "1,5–3 s", "Rozproszone", "Hook i finał", "Efekt końcowy to główny argument."], ["Detailer przy pracy", "Ręce i narzędzie w kadrze", "Zza ramienia", "Statyw", "6–10 s", "1–2 s", "Robocze + kontra", "Proces", "Buduje zaufanie."], ["Zbliżenie detalu", "Detal po usłudze", "Makro", "Powolny najazd", "5–8 s", "1–1,5 s", "Punktowe", "Detale", "Pokazuje precyzję."]],
+};
+const CAPTIONS = {
+  correction: { hook: ["Lakier pełen mikrorys?", "Zobacz różnicę"], process: ["Precyzyjna korekta lakieru"], result: ["Przywracamy mu blask"] },
+  ceramic: { hook: ["Ochrona, którą widać", "Zobacz efekt hydrofobowy"], process: ["Aplikacja powłoki ceramicznej"], result: ["Głęboki połysk"] },
+  ppf: { hook: ["Niewidzialna ochrona", "Widzisz tę folię?"], process: ["Precyzyjny montaż folii PPF"], result: ["Lakier pod ochroną"] },
+  interior: { hook: ["Wnętrze do odświeżenia?", "Zobacz tę różnicę"], process: ["Pranie tapicerki"], result: ["Świeże wnętrze"] },
+  wash: { hook: ["To nie jest zwykła myjnia", "Zobacz tę pianę"], process: ["Mycie detailingowe"], result: ["Czysto do ostatniego detalu"] },
+  other: { hook: ["Zobacz efekt", "Precyzja w każdym detalu"], process: ["Etap po etapie"], result: ["Efekt końcowy"] },
+};
+const MOODS = { prestige: ["Luxury cinematic", 70, 95, "Orkiestrowe pady, szerokie przestrzenie, powolne narastanie."], engagement: ["Energetic electronic", 120, 132, "Wyraźny beat 4/4 — szybkie cięcia na każdy beat."], default: ["Minimal house", 118, 125, "Minimalistyczny groove, nowoczesny i czysty klimat."] };
+const PRESETS = {
+  minimal_premium: { label: "Minimal Premium", font: "Poppins", weight: 500, size: 56, color: "#FFFFFF", hl: "#7FB2FF", outline: 0, shadow: 2, box: false, upper: false, ls: 1, anim: "fade", y: 0.7 },
+  bold_viral: { label: "Bold Viral", font: "Anton", weight: 400, size: 92, color: "#FFFFFF", hl: "#FFE14D", outline: 6, shadow: 0, box: false, upper: true, ls: 1, anim: "pop", y: 0.62 },
+  cinematic: { label: "Cinematic", font: "Cinzel", weight: 400, size: 60, color: "#F4EFE6", hl: "#E7C77A", outline: 0, shadow: 3, box: false, upper: true, ls: 8, anim: "fade", y: 0.5 },
+  luxury: { label: "Luxury Automotive", font: "Playfair Display", weight: 400, size: 66, color: "#D9B86C", hl: "#FFFFFF", outline: 0, shadow: 2, box: false, upper: false, ls: 2, anim: "slide", y: 0.72 },
+  clean_modern: { label: "Clean Modern", font: "Montserrat", weight: 700, size: 54, color: "#FFFFFF", hl: "#4C8DFF", outline: 0, shadow: 0, box: true, upper: false, ls: 0, anim: "slide", y: 0.72 },
+};
+
+/* ═════════════ Integracje viewer'a (AI, zapis pliku) ═════════════ */
+const CAP = { sample: null, downloads: null, images: 0, ready: false };
+const CAP_READY = (async () => {
+  if (window.claude && typeof window.claude.use === "function") {
+    try { CAP.sample = await window.claude.use("sample"); } catch { CAP.sample = null; }
+    try { CAP.downloads = await window.claude.use("downloads"); } catch { CAP.downloads = null; }
+    if (CAP.sample) { try { const l = await CAP.sample.limits(); CAP.images = l?.images?.maxCount ?? 0; } catch { CAP.images = 0; } }
+  }
+  CAP.ready = true;
+  updateAiPill();
+  if (!aiUsable()) for (const id of ["a-ai", "m-ai"]) { const cb = $("#" + id); cb.checked = false; cb.disabled = true; cb.parentElement.lastChild.textContent = " Ocena AI (Claude) działa, gdy strona jest otwarta w claude.ai — tutaj działa analiza techniczna."; }
+})();
+const capReady = () => Promise.race([CAP_READY, sleep(4000)]);
+function aiUsable() { return Boolean(CAP.sample && CAP.images > 0 && !CAP.denied); }
+function updateAiPill() {
+  const p = $("#ai-pill");
+  if (!CAP.ready) return;
+  if (aiUsable()) { p.className = "pill on"; p.lastElementChild.textContent = "AI: Claude (Twoje konto)"; }
+  else { p.className = "pill off"; p.lastElementChild.textContent = CAP.denied ? "AI wyłączone — tryb techniczny" : "AI niedostępne — tryb techniczny"; }
+}
+const AI_ERR = { not_granted: "Nie zezwolono na użycie Claude — pokazuję analizę techniczną.", rate_limited: "Limit zapytań do Claude — spróbuj później. Pokazuję analizę techniczną.", sampling_disabled: "Claude nie jest dostępny dla tego konta.", refused: "Claude odmówił analizy tego materiału.", invalid_json: "AI zwróciło nieczytelną odpowiedź.", image_rejected: "Nie udało się wysłać klatek do AI.", images_unavailable: "Ten widok nie może wysyłać obrazów do AI.", prompt_too_large: "Materiał jest za duży dla AI.", session_expired: "Sesja wygasła — zaloguj się ponownie do Claude." };
+
+/* ═════════════ Wideo: otwieranie, przewijanie, próbkowanie ═════════════ */
+function makeVideo(url) {
+  const v = document.createElement("video");
+  v.src = url; v.preload = "auto"; v.playsInline = true; v.muted = false;
+  return v;
+}
+function waitEvent(el, ev, ms = 8000) {
+  return new Promise((res, rej) => {
+    let t;
+    const ok = () => { clearTimeout(t); el.removeEventListener(ev, ok); el.removeEventListener("error", bad); res(); };
+    const bad = () => { clearTimeout(t); el.removeEventListener(ev, ok); el.removeEventListener("error", bad); rej(new Error("media")); };
+    el.addEventListener(ev, ok); el.addEventListener("error", bad);
+    t = setTimeout(() => { el.removeEventListener(ev, ok); el.removeEventListener("error", bad); res(); }, ms);
+  });
+}
+async function seek(v, t) {
+  if (v.readyState < 1 || !isFinite(v.duration)) await waitEvent(v, "loadedmetadata", 8000).catch(() => {});
+  if (!isFinite(v.duration)) return;
+  const target = clamp(t, 0, Math.max(0, (v.duration || 0) - 0.02));
+  if (Math.abs(v.currentTime - target) < 0.001 && v.readyState >= 2) return;
+  const p = waitEvent(v, "seeked", 4000);
+  v.currentTime = target;
+  await p;
+}
+async function openSource(file) {
+  const url = URL.createObjectURL(file);
+  const v = makeVideo(url);
+  try { await waitEvent(v, "loadedmetadata", 15000); } catch { throw new Error(`Przeglądarka nie potrafi odczytać pliku „${file.name}”. Zapisz go jako MP4 (H.264) i spróbuj ponownie.`); }
+  if (!v.videoWidth || !isFinite(v.duration)) throw new Error(`Nie udało się odczytać obrazu z pliku „${file.name}” (np. kodek HEVC). Zapisz go jako MP4 (H.264).`);
+  if (v.readyState < 2) await waitEvent(v, "loadeddata", 8000).catch(() => {});
+  return { id: uid("s"), file, name: file.name, url, els: [v, makeVideo(url)], duration: v.duration, width: v.videoWidth, height: v.videoHeight, fps: null };
+}
+async function estimateFps(v) {
+  if (!("requestVideoFrameCallback" in v)) return null;
+  const times = [];
+  v.muted = true;
+  try {
+    await seek(v, Math.min(0.2, v.duration / 3));
+    await new Promise((res) => {
+      let n = 0;
+      const cb = (_now, md) => { times.push(md.mediaTime); if (++n < 14) v.requestVideoFrameCallback(cb); else res(); };
+      v.requestVideoFrameCallback(cb);
+      v.play().catch(res);
+      setTimeout(res, 1500);
+    });
+  } finally { v.pause(); v.muted = false; }
+  const d = []; for (let i = 1; i < times.length; i++) if (times[i] > times[i - 1]) d.push(times[i] - times[i - 1]);
+  if (d.length < 4) return null;
+  const f = 1 / median(d);
+  return f > 5 && f < 240 ? Math.round(f * 100) / 100 : null;
+}
+/** Próbkowanie obrazu: jasność, kontrast, nasycenie, ruch, ostrość (Laplacian), histogram (cięcia). */
+async function sampleVideo(src, fps, onP, signal) {
+  const v = src.els[0];
+  const W = 128, H = Math.max(2, Math.round((W * src.height) / src.width));
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  const out = [];
+  let prev = null, prevHist = null;
+  const n = Math.max(2, Math.floor(src.duration * fps));
+  for (let i = 0; i < n; i++) {
+    if (signal?.aborted) throw new Cancelled();
+    const t = Math.min(src.duration - 0.03, (i + 0.5) / fps);
+    await seek(v, t);
+    ctx.drawImage(v, 0, 0, W, H);
+    const d = ctx.getImageData(0, 0, W, H).data;
+    const g = new Float32Array(W * H);
+    const hist = new Float32Array(32);
+    let sum = 0, sat = 0;
+    for (let p = 0, q = 0; p < d.length; p += 4, q++) {
+      const r = d[p], gg = d[p + 1], b = d[p + 2];
+      const y = 0.299 * r + 0.587 * gg + 0.114 * b;
+      g[q] = y; sum += y; sat += Math.max(r, gg, b) - Math.min(r, gg, b);
+      hist[Math.min(31, y >> 3)]++;
+    }
+    const N = W * H;
+    for (let k = 0; k < 32; k++) hist[k] /= N;
+    const sorted = Array.from(g).sort((a, b) => a - b);
+    const yrange = sorted[Math.floor(N * 0.95)] - sorted[Math.floor(N * 0.05)];
+    let lapSum = 0, lapSq = 0, lc = 0;
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const k = y * W + x;
+      const l = 4 * g[k] - g[k - 1] - g[k + 1] - g[k - W] - g[k + W];
+      lapSum += l; lapSq += l * l; lc++;
+    }
+    const lapVar = lc ? lapSq / lc - (lapSum / lc) ** 2 : 0;
+    let ydif = 0, hd = 0;
+    if (prev) { let s = 0; for (let k = 0; k < N; k++) s += Math.abs(g[k] - prev[k]); ydif = s / N; for (let k = 0; k < 32; k++) hd += Math.abs(hist[k] - prevHist[k]); hd /= 2; }
+    out.push({ t: round(t, 3), yavg: sum / N, yrange, ydif, sat: sat / N, lap: lapVar, hd });
+    prev = g; prevHist = hist;
+    onP?.((i + 1) / n);
+  }
+  return out;
+}
+const norm = (s) => ({
+  motion: clamp(s.ydif / 18, 0, 1),
+  brightness: clamp(s.yavg / 255, 0, 1),
+  sharpness: clamp((Math.log10(s.lap + 1) - 1.1) / 1.6, 0, 1),
+  saturation: clamp(s.sat / 90, 0, 1),
+  contrast: clamp(s.yrange / 200, 0, 1),
+});
+function detectScenes(samples, duration, minLen = 0.5) {
+  const cuts = [];
+  for (let i = 1; i < samples.length; i++) {
+    const s = samples[i];
+    if (s.hd > 0.42 || (s.hd > 0.26 && s.ydif > 32)) cuts.push({ t: (samples[i - 1].t + s.t) / 2, score: s.hd });
+  }
+  const merged = [];
+  for (const c of cuts) {
+    const last = merged[merged.length - 1];
+    if (last && c.t - last.t < minLen) { if (c.score > last.score) merged[merged.length - 1] = c; continue; }
+    if (c.t > minLen && c.t < duration - minLen * 0.5) merged.push(c);
+  }
+  const scenes = [];
+  let start = 0;
+  for (const c of merged) { scenes.push({ index: scenes.length, start: round(start, 2), end: round(c.t, 2) }); start = c.t; }
+  scenes.push({ index: scenes.length, start: round(start, 2), end: round(duration, 2) });
+  return scenes;
+}
+function statsFor(samples, a, b) {
+  let pool = samples.filter((s) => s.t >= a - 0.001 && s.t < b);
+  if (!pool.length) pool = samples.filter((s) => Math.abs(s.t - (a + b) / 2) < 0.7);
+  const n = pool.map(norm), nm = (pool.length > 1 ? pool.slice(1) : pool).map(norm);
+  return { motion: mean(nm.map((x) => x.motion)), brightness: mean(n.map((x) => x.brightness)), sharpness: mean(n.map((x) => x.sharpness)), saturation: mean(n.map((x) => x.saturation)), contrast: mean(n.map((x) => x.contrast)) };
+}
+function interestOf(s) {
+  const exp = s.brightness < 0.15 ? 0.4 : s.brightness > 0.85 ? 0.7 : 1;
+  return round(clamp((0.42 * Math.min(1, s.motion * 1.6) + 0.3 * s.sharpness + 0.16 * s.contrast + 0.12 * s.saturation) * exp * 10, 0, 10), 2);
+}
+function bestWindow(samples, a, b, len, scoreFn) {
+  if (b - a <= len + 0.05) return { start: a, end: b };
+  let best = { start: a, end: a + len, score: -Infinity };
+  for (let s = a + 0.15; s + len <= b - 0.1 + 1e-6; s += 0.25) {
+    const pool = samples.filter((x) => x.t >= s && x.t < s + len);
+    if (!pool.length) continue;
+    const v = mean(pool.map((x) => scoreFn(norm(x))));
+    if (v > best.score) best = { start: s, end: s + len, score: v };
+  }
+  return best.score === -Infinity ? { start: a, end: a + len } : best;
+}
+async function grabFrame(v, t, w, asBlob) {
+  await seek(v, t);
+  const h = Math.round((w * v.videoHeight) / v.videoWidth);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  c.getContext("2d").drawImage(v, 0, 0, w, h);
+  if (asBlob) return new Promise((r) => c.toBlob((b) => r(b), "image/jpeg", 0.82));
+  return c.toDataURL("image/jpeg", 0.7);
+}
+
+/* ═════════════ Audio: głośność (przybliżenie BS.1770), cisza, tempo, beaty ═════════════ */
+async function decodeAt(buf, rate) {
+  const ctx = new OfflineAudioContext(1, rate, rate);
+  return ctx.decodeAudioData(buf.slice(0));
+}
+function toMono(ab) {
+  const out = new Float32Array(ab.length);
+  for (let c = 0; c < ab.numberOfChannels; c++) { const d = ab.getChannelData(c); for (let i = 0; i < d.length; i++) out[i] += d[i] / ab.numberOfChannels; }
+  return out;
+}
+async function loudnessLufs(ab48) {
+  const ch = Math.min(2, ab48.numberOfChannels), off = new OfflineAudioContext(ch, ab48.length, 48000);
+  const src = off.createBufferSource(); src.buffer = ab48;
+  const shelf = off.createBiquadFilter(); shelf.type = "highshelf"; shelf.frequency.value = 1681; shelf.gain.value = 4;
+  const hp = off.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 38; hp.Q.value = 0.5;
+  src.connect(shelf).connect(hp).connect(off.destination); src.start();
+  const out = await off.startRendering(), chans = Array.from({ length: ch }, (_, c) => out.getChannelData(c));
+  const block = 19200, hop = 4800, ms = [];
+  for (let i = 0; i + block <= out.length; i += hop) { let s = 0; for (const f of chans) for (let j = i; j < i + block; j++) s += f[j] * f[j]; ms.push(s / block); }
+  const L = (m) => -0.691 + 10 * Math.log10(m || 1e-12);
+  const abs = ms.filter((m) => L(m) > -70);
+  if (!abs.length) return null;
+  const rel = L(mean(abs)) - 10;
+  const gated = abs.filter((m) => L(m) > rel);
+  let peak = 0; for (let c = 0; c < ab48.numberOfChannels; c++) { const raw = ab48.getChannelData(c); for (let i = 0; i < raw.length; i++) { const v = raw[i] < 0 ? -raw[i] : raw[i]; if (v > peak) peak = v; } }
+  return { lufs: round(L(mean(gated)), 1), peakDb: round(20 * Math.log10(peak || 1e-9), 1) };
+}
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (-2 * Math.PI) / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const ar = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci, ai = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+        re[i + k + len / 2] = re[i + k] - ar; im[i + k + len / 2] = im[i + k] - ai; re[i + k] += ar; im[i + k] += ai;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+function tempoOf(pcm, sr) {
+  const frame = 1024, hop = 512, nF = Math.max(0, Math.floor((pcm.length - frame) / hop) + 1), fps = sr / hop;
+  if (nF < fps * 4) return { bpm: null, confidence: 0, beats: [] };
+  const win = new Float64Array(frame).map((_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (frame - 1)));
+  const bins = frame / 2, raw = new Float64Array(nF), re = new Float64Array(frame), im = new Float64Array(frame);
+  let prevMag = new Float64Array(bins);
+  for (let f = 0; f < nF; f++) {
+    for (let i = 0; i < frame; i++) { re[i] = pcm[f * hop + i] * win[i]; im[i] = 0; }
+    fft(re, im);
+    const mag = new Float64Array(bins); let flux = 0;
+    for (let b = 1; b < bins; b++) { mag[b] = Math.log1p(100 * Math.hypot(re[b], im[b])); const d = mag[b] - prevMag[b]; if (d > 0) flux += d; }
+    raw[f] = flux; prevMag = mag;
+  }
+  const w = Math.max(1, Math.round(fps * 0.25)), env0 = new Float64Array(nF); let mx = 0;
+  for (let i = 0; i < nF; i++) { let s = 0, c = 0; for (let j = Math.max(0, i - w); j <= Math.min(nF - 1, i + w); j++) { s += raw[j]; c++; } env0[i] = Math.max(0, raw[i] - s / c); mx = Math.max(mx, env0[i]); }
+  if (mx > 0) for (let i = 0; i < nF; i++) env0[i] /= mx;
+  const env = new Float64Array(nF), K = [0.1, 0.2, 0.4, 0.2, 0.1];
+  for (let i = 0; i < nF; i++) { let v = 0; for (let k = -2; k <= 2; k++) v += env0[clamp(i + k, 0, nF - 1)] * K[k + 2]; env[i] = v; }
+  const minLag = Math.floor((60 * fps) / 190), maxLag = Math.ceil((60 * fps) / 60), ac = new Float64Array(maxLag + 2);
+  for (let lag = minLag; lag <= maxLag + 1; lag++) { let s = 0; for (let i = 0; i + lag < nF; i++) s += env[i] * env[i + lag]; ac[lag] = s / (nF - lag); }
+  let bestLag = minLag, bestVal = -Infinity, sumW = 0, cnt = 0;
+  for (let lag = minLag; lag <= maxLag; lag++) { const bpm = (60 * fps) / lag; const prior = Math.exp(-0.5 * (Math.log2(bpm / 120) / 0.9) ** 2); const v = ac[lag] * prior; sumW += ac[lag]; cnt++; if (v > bestVal) { bestVal = v; bestLag = lag; } }
+  const half = bestLag / 2, near = (l) => Math.max(ac[Math.floor(l)] || 0, ac[Math.ceil(l)] || 0);
+  if (half >= minLag && near(half) > 0.6 * ac[bestLag]) { let hb = Math.round(half); for (let l = Math.floor(half) - 1; l <= Math.ceil(half) + 1; l++) if (l >= minLag && ac[l] > ac[hb]) hb = l; bestLag = hb; }
+  const meanAc = sumW / Math.max(1, cnt);
+  const confidence = meanAc > 0 ? clamp((ac[bestLag] / meanAc - 1) / 3, 0, 1) : 0;
+  const y0 = ac[bestLag - 1] ?? ac[bestLag], y1 = ac[bestLag], y2 = ac[bestLag + 1] ?? ac[bestLag], den = y0 - 2 * y1 + y2;
+  const period = den !== 0 ? bestLag + (0.5 * (y0 - y2)) / den : bestLag;
+  let bestPh = 0, bestSum = -Infinity;
+  for (let ph = 0; ph < period; ph += 0.5) { let s = 0; for (let k = ph; k < nF; k += period) s += env[Math.round(k)] || 0; if (s > bestSum) { bestSum = s; bestPh = ph; } }
+  const beats = [], tol = Math.max(1, Math.round(period * 0.1));
+  for (let k = bestPh; k < nF; k += period) { const c = Math.round(k); let bi = c; for (let j = Math.max(0, c - tol); j <= Math.min(nF - 1, c + tol); j++) if (env0[j] > env0[bi]) bi = j; beats.push(round(bi / fps, 3)); }
+  return confidence > 0.08 ? { bpm: round((60 * fps) / period, 1), confidence: round(confidence, 2), beats } : { bpm: null, confidence: round(confidence, 2), beats: [] };
+}
+async function analyzeAudio(file, withTempo = true) {
+  const buf = await file.arrayBuffer();
+  let ab;
+  try { ab = await decodeAt(buf, 22050); } catch { return null; }
+  if (!ab || !ab.length) return null;
+  const pcm = toMono(ab), sr = 22050, step = 0.1, hop = Math.round(sr * step), energy = [];
+  for (let i = 0; i < pcm.length; i += hop) { let s = 0; const e = Math.min(pcm.length, i + hop); for (let j = i; j < e; j++) s += pcm[j] * pcm[j]; const r = Math.sqrt(s / Math.max(1, e - i)); energy.push(round(r > 1e-6 ? 20 * Math.log10(r) : -120, 1)); }
+  if (Math.max(...energy) < -75) return { silent: true, durationSec: pcm.length / sr, energyDb: energy, silences: [], silenceRatio: 1, lufs: null, peakDb: null, tempo: { bpm: null, confidence: 0, beats: [] }, rises: [] };
+  const silences = []; let s0 = null;
+  energy.forEach((e, i) => { if (e < -45) { if (s0 === null) s0 = i; } else if (s0 !== null) { if ((i - s0) * step >= 0.6) silences.push({ start: round(s0 * step, 2), end: round(i * step, 2) }); s0 = null; } });
+  if (s0 !== null && (energy.length - s0) * step >= 0.6) silences.push({ start: round(s0 * step, 2), end: round(energy.length * step, 2) });
+  const rises = [];
+  for (let i = 20; i < energy.length - 10; i += 3) { const b = mean(energy.slice(i - 20, i).map((x) => Math.max(x, -80))), a = mean(energy.slice(i, i + 10).map((x) => Math.max(x, -80))); if (a - b > 6 && a > -35 && (!rises.length || i * step - rises[rises.length - 1] > 2)) rises.push(round(i * step, 1)); }
+  let loud = null;
+  try { loud = await loudnessLufs(await decodeAt(buf, 48000)); } catch { loud = null; }
+  const dur = pcm.length / sr;
+  return { silent: false, durationSec: dur, energyDb: energy, silences, silenceRatio: round(silences.reduce((a, x) => a + x.end - x.start, 0) / Math.max(0.1, dur), 3), lufs: loud?.lufs ?? null, peakDb: loud?.peakDb ?? null, tempo: withTempo ? tempoOf(pcm, sr) : { bpm: null, confidence: 0, beats: [] }, rises };
+}
+
+/* ═════════════ Heurystyki (pomiar techniczny) ═════════════ */
+function recLen(goal, platform) { const g = GOAL_LEN[goal] || GOAL_LEN.service, p = PLATFORMS[platform].rec; return [Math.max(g[0], p[0] - 2), Math.min(g[1], p[1] + 10)]; }
+function segmentsWhere(samples, pred, minLen) {
+  const out = []; let s = null, last = 0; const step = samples.length > 1 ? samples[1].t - samples[0].t : 0.25;
+  for (const x of samples) { const hit = pred(norm(x)); if (hit && s === null) s = x.t; if (!hit && s !== null) { if (x.t - s >= minLen) out.push({ start: round(s, 2), end: round(x.t, 2) }); s = null; } last = x.t; }
+  if (s !== null && last + step - s >= minLen) out.push({ start: round(s, 2), end: round(last + step, 2) });
+  return out;
+}
+function runHeuristics(inp) {
+  const { scenes, samples, info, audio, platform, goal } = inp;
+  const dur = info.duration, lens = scenes.map((s) => s.end - s.start), li = lens.indexOf(Math.max(...lens));
+  const all = samples.map(norm), first3 = samples.filter((s) => s.t < 3).slice(1).map(norm);
+  const m = {
+    durationSec: round(dur, 2), cuts: Math.max(0, scenes.length - 1), avgShot: round(dur / Math.max(1, scenes.length), 2),
+    longest: { start: scenes[li]?.start ?? 0, end: scenes[li]?.end ?? dur, length: round(lens[li] ?? dur, 2) },
+    firstCutAt: scenes.length > 1 ? round(scenes[1].start, 2) : null, motionFirst3s: round(mean(first3.map((x) => x.motion)), 3),
+    avgMotion: round(mean(all.map((x) => x.motion)), 3), avgSharpness: round(mean(all.map((x) => x.sharpness)), 3), avgBrightness: round(mean(all.map((x) => x.brightness)), 3),
+    darkRatio: round(all.filter((x) => x.brightness < 0.16).length / Math.max(1, all.length), 3), blurryRatio: round(all.filter((x) => x.sharpness < 0.3).length / Math.max(1, all.length), 3),
+    staticSegs: segmentsWhere(samples.slice(1), (n) => n.motion < 0.05, 2), darkSegs: segmentsWhere(samples, (n) => n.brightness < 0.14, 1), blurrySegs: segmentsWhere(samples, (n) => n.sharpness < 0.28, 1),
+    aspect: info.width / info.height, aspectOk: Math.abs(info.width / info.height - 9 / 16) < 0.03, shortSide: Math.min(info.width, info.height),
+  };
+  const st = samples.filter((s) => s.t < 3).map(norm), sb = mean(st.map((x) => x.brightness)), ss = mean(st.map((x) => x.sharpness));
+  const sa = audio && !audio.silent ? mean(audio.energyDb.slice(0, 15)) : null;
+  const fc = m.firstCutAt === null ? 0.15 : m.firstCutAt <= 1.6 ? 1 : m.firstCutAt <= 2.5 ? 0.75 : m.firstCutAt <= 3.5 ? 0.45 : 0.2;
+  const hook = 8 * clamp(m.motionFirst3s * 2.2, 0, 1) + 6 * fc + 4 * (sb < 0.15 ? 0.3 : sb > 0.9 ? 0.6 : 1) + 4 * clamp(ss, 0, 1) + 3 * (sa === null ? 0.5 : sa > -35 ? 1 : sa > -50 ? 0.5 : 0.1);
+  const exposure = m.avgBrightness < 0.18 ? 0.35 : m.avgBrightness < 0.25 ? 0.7 : m.avgBrightness > 0.82 ? 0.6 : 1;
+  const res = m.shortSide >= 1080 ? 1 : m.shortSide >= 720 ? 0.65 : 0.3;
+  const asp = m.aspectOk ? 1 : Math.abs(m.aspect - 0.8) < 0.04 ? 0.5 : 0;
+  const visual = 7 * m.avgSharpness + 4 * exposure + 3 * clamp(mean(all.map((x) => x.contrast)) * 1.2, 0, 1) + 2 * clamp(mean(all.map((x) => x.saturation)) * 1.4, 0, 1) + 2 * res + 2 * asp;
+  const ideal = goal === "prestige" ? [1.6, 3.2] : goal === "engagement" ? [0.8, 1.8] : goal === "education" ? [1.6, 3.5] : [1.1, 2.6];
+  const shotFit = m.avgShot < ideal[0] * 0.6 ? 0.6 : m.avgShot < ideal[0] ? 0.85 : m.avgShot <= ideal[1] ? 1 : m.avgShot <= ideal[1] * 1.6 ? 0.55 : 0.2;
+  const lng = m.longest.length <= 3.5 ? 1 : m.longest.length <= 5 ? 0.6 : m.longest.length <= 8 ? 0.3 : 0.1;
+  const staticRatio = m.staticSegs.reduce((a, s) => a + s.end - s.start, 0) / Math.max(1, dur);
+  const [rlo, rhi] = recLen(goal, platform);
+  const lenFit = dur >= rlo - 3 && dur <= rhi + 3 ? 1 : dur <= rhi * 1.6 ? 0.6 : 0.3;
+  const pacing = 6 * shotFit + 3 * lng + 3 * (1 - clamp(staticRatio * 2, 0, 1)) + 3 * lenFit;
+  const cat = (key, score, why, basis = "pomiar") => ({ key, label: CAT_LABEL[key], score: score === null ? null : round(clamp(score, 0, CAT_MAX[key]), 1), max: CAT_MAX[key], why, basis: score === null ? "brak" : basis });
+  const categories = [
+    cat("hook", hook, `Pomiar: ${m.firstCutAt === null ? "brak cięć w materiale" : `pierwsze cięcie w ${pl(m.firstCutAt)} s`}, ruch w pierwszych 3 s: ${m.motionFirst3s < 0.12 ? "niski" : m.motionFirst3s < 0.3 ? "umiarkowany" : "wysoki"}${sb < 0.15 ? ", ciemny początek" : ""}.`),
+    cat("visual", visual, `Pomiar: ostrość ${m.avgSharpness > 0.65 ? "dobra" : m.avgSharpness > 0.4 ? "średnia" : "niska"}, ekspozycja ${exposure === 1 ? "prawidłowa" : m.avgBrightness < 0.25 ? "zbyt ciemna" : "zbyt jasna"}, ${info.width}×${info.height}, ${m.aspectOk ? "format 9:16" : "format inny niż 9:16"}.`),
+    cat("clarity", null, "Czytelność przekazu wymaga zrozumienia treści obrazu — dostępna w ocenie AI."),
+    cat("pacing", pacing, `Pomiar: średnie ujęcie ${pl(m.avgShot)} s (zalecane ${pl(ideal[0])}–${pl(ideal[1])} s), najdłuższe ${pl(m.longest.length)} s, ${m.cuts} cięć, długość ${pl(dur)} s.`),
+    cat("cta", null, "Ocena CTA wymaga odczytania napisów lub narracji — dostępna w ocenie AI."),
+    cat("captions", null, "Ocena napisów na ekranie wymaga analizy obrazu przez AI."),
+  ];
+  const avail = categories.filter((c) => c.score !== null);
+  const total = Math.round((avail.reduce((a, c) => a + c.score, 0) / avail.reduce((a, c) => a + c.max, 0)) * 100);
+
+  // Uwagi z czasami
+  const F = [];
+  const add = (x) => F.push({ id: uid("f"), caption: null, newDuration: null, source: "pomiar", ...x, start: round(x.start, 2), end: round(Math.min(dur, x.end), 2) });
+  const best = [...scenes].sort((a, b) => b.interest - a.interest);
+  const label = (s) => s.ai?.description || `Ujęcie ${s.index + 1} (${tc(s.start, false)}–${tc(s.end, false)}): ${s.motion < 0.06 ? "statyczne" : s.motion < 0.25 ? "spokojny ruch" : "dużo ruchu"}, ${s.brightness < 0.18 ? "ciemne" : "dobrze naświetlone"}, ${s.sharpness < 0.35 ? "nieostre" : "ostre"}`;
+  const overlap = (a, b) => Math.max(0, Math.min(a.end, b.end) - Math.max(a.start, b.start)) / Math.max(0.01, a.end - a.start);
+  if ((m.firstCutAt === null || m.firstCutAt > 3) && m.motionFirst3s < 0.2) {
+    const strong = best.find((s) => s.start > 1);
+    add({ start: 0, end: Math.min(m.firstCutAt ?? dur, 4), severity: "BAD", category: "hook", shot: label(scenes[0]), problem: "Spokojny, statyczny początek — przez pierwsze sekundy obraz niewiele się zmienia.", reason: "Na Reels i TikToku decyzja o przewinięciu zapada w 1–2 s.", suggestion: strong ? `Zacznij od najmocniejszego fragmentu (${tc(strong.start, false)}–${tc(strong.end, false)}) skróconego do ok. 1,5 s, a obecny początek skróć do maks. 1 s.` : "Skróć ujęcie otwierające do maks. 1 s i dodaj cięcie w pierwszych 1,5 s.", newDuration: 1.5, priority: 1 });
+  } else if (m.firstCutAt !== null && m.firstCutAt <= 2 && m.motionFirst3s >= 0.15) {
+    add({ start: 0, end: m.firstCutAt, severity: "GOOD", category: "hook", shot: label(scenes[0]), problem: null, reason: "Szybkie pierwsze cięcie i ruch w kadrze pomagają zatrzymać widza.", suggestion: "Dobre tempo otwarcia — upewnij się, że od razu widać efekt lub problem.", priority: 5 });
+  }
+  const hookBad = F.some((x) => x.category === "hook" && x.severity === "BAD");
+  for (const s of scenes) {
+    const len = s.end - s.start;
+    if (len > 4.2 && !(s.index === 0 && hookBad)) add({ start: s.start, end: s.end, severity: len > 6.5 ? "BAD" : "WARN", category: "pacing", shot: label(s), problem: `Zbyt długie ujęcie (${pl(len)} s) pokazujące jedną czynność.`, reason: "Długie ujęcia bez zmiany kadru obniżają dynamikę.", suggestion: "Skróć do ok. 2 s, zostawiając najciekawszy fragment, albo podziel na 2–3 krótsze ujęcia.", newDuration: 2, priority: len > 6.5 ? 1 : 2 });
+  }
+  for (const seg of m.staticSegs) if (!F.some((x) => x.severity !== "GOOD" && overlap(seg, x) > 0.5)) add({ ...seg, severity: "WARN", category: "pacing", shot: "Statyczny fragment — minimalny ruch w kadrze.", problem: "Obraz prawie się nie zmienia przez ponad 2 s.", reason: "Brak zmiany obrazu to typowe miejsce spadku zainteresowania.", suggestion: "Dodaj powolny najazd, skróć fragment lub przykryj go ujęciem detalu.", priority: 3 });
+  for (const seg of m.darkSegs) add({ ...seg, severity: "WARN", category: "visual", shot: "Zbyt ciemny fragment.", problem: "Niedoświetlony obraz — lakier i detale słabo widoczne.", reason: "W detailingu światło i połysk to główne argumenty wizualne.", suggestion: "Podbij ekspozycję albo zastąp ujęcie lepiej oświetlonym (lampa inspekcyjna).", priority: 3 });
+  for (const seg of m.blurrySegs) add({ ...seg, severity: seg.end - seg.start > 2 ? "BAD" : "WARN", category: "visual", shot: "Nieostry fragment obrazu.", problem: "Obraz jest rozmyty.", reason: "Nieostre kadry obniżają postrzeganą jakość usługi premium.", suggestion: "Usuń lub skróć ten fragment do 0,5–1 s.", priority: 2 });
+  for (const s of best.slice(0, 2)) if (s.interest >= 5) add({ start: s.start, end: s.end, severity: "GOOD", category: "visual", shot: label(s), problem: null, reason: "Jedno z najbardziej dynamicznych i ostrych ujęć.", suggestion: s.start > 2 ? "Dobry kandydat na hook — użyj go również na początku." : "Mocny moment — zachowaj go.", priority: 4 });
+  if (!m.aspectOk) add({ start: 0, end: dur, severity: "BAD", category: "visual", shot: `Proporcje ${info.width}×${info.height}.`, problem: "Film nie jest w pionowym formacie 9:16.", reason: "Inne proporcje dają czarne pasy lub mały obraz.", suggestion: "Przytnij kadr do 9:16 (wersja poprawiona robi to automatycznie).", priority: 1 });
+  if (audio && !audio.silent) {
+    if (audio.lufs !== null && audio.lufs < -22) add({ start: 0, end: dur, severity: "WARN", category: "audio", shot: "Ścieżka audio.", problem: `Zbyt cicha ścieżka (ok. ${pl(audio.lufs)} LUFS).`, reason: "Cichy materiał brzmi słabo przy innych rolkach.", suggestion: "Podnieś głośność do ok. −14 LUFS.", priority: 3 });
+    if (audio.peakDb !== null && audio.peakDb > -0.5) add({ start: 0, end: dur, severity: "WARN", category: "audio", shot: "Ścieżka audio.", problem: `Szczyty blisko 0 dBFS (${pl(audio.peakDb)} dB).`, reason: "Po kompresji platformy przesterowania są słyszalne.", suggestion: "Obniż szczyty limiterem.", priority: 4 });
+    for (const s of audio.silences.filter((x) => x.end - x.start >= 1.5)) add({ ...s, severity: "WARN", category: "audio", shot: "Cisza na ścieżce audio.", problem: "Fragment bez dźwięku.", reason: "Cisza odbiera rolce dynamikę.", suggestion: "Dodaj muzykę na całej długości lub skróć fragment.", priority: 3 });
+  } else add({ start: 0, end: dur, severity: "WARN", category: "audio", shot: "Brak dźwięku.", problem: "Film nie ma ścieżki audio (lub przeglądarka nie mogła jej odczytać).", reason: "Muzyka buduje rytm i klimat rolki.", suggestion: "Dodaj legalnie licencjonowaną muzykę.", priority: 2 });
+  if (dur > rhi + 3) add({ start: rhi, end: dur, severity: "WARN", category: "pacing", shot: "Końcówka filmu.", problem: `Film trwa ${Math.round(dur)} s — dłużej niż zalecane ${rlo}–${rhi} s.`, reason: "Dłuższe rolki rzadziej są oglądane do końca.", suggestion: `Skróć do ok. ${Math.round((rlo + rhi) / 2)} s.`, priority: 2 });
+  F.sort((a, b) => a.start - b.start || a.priority - b.priority);
+
+  // Krzywa retencji (heurystyczna prognoza)
+  const pts = [], decs = [], cutsT = scenes.slice(1).map((s) => s.start);
+  let v = 100;
+  for (let t = 0; t <= dur + 1e-6; t += 0.5) {
+    const pool = samples.filter((s) => s.t >= t && s.t < t + 0.5).map(norm);
+    const mo = mean(pool.map((p) => p.motion)), sh = pool.length ? mean(pool.map((p) => p.sharpness)) : 0.6, br = pool.length ? mean(pool.map((p) => p.brightness)) : 0.5;
+    const age = t - Math.max(0, ...cutsT.filter((c) => c <= t));
+    const sc = scenes.find((s) => t >= s.start && t < s.end) || scenes[scenes.length - 1];
+    let d = 1.1 + (age > 3 ? 1.6 : 0) + (age > 5 ? 1.4 : 0) + (mo < 0.05 ? 1.4 : mo < 0.12 ? 0.6 : -Math.min(1, mo * 2)) + (br < 0.15 ? 0.8 : 0) + (sh < 0.3 ? 0.8 : 0);
+    if (t < 3 && m.motionFirst3s < 0.15 && (m.firstCutAt === null || m.firstCutAt > 3)) d += 2;
+    if (sc?.ai?.interest != null) d -= (sc.ai.interest - 5) * 0.35;
+    if (cutsT.some((c) => c >= t && c < t + 0.5)) d -= 0.8;
+    if (t > 20) d += 0.4;
+    d = clamp(d, -1.5, 6); decs.push(d); v = clamp(v - d * 0.5, 5, 100); pts.push({ t: round(t, 2), v: round(v, 1) });
+  }
+  const lvl = (d) => (d <= 0.6 ? "strong" : d <= 1.8 ? "good" : d <= 3 ? "drop" : "weak");
+  let segs = [];
+  decs.forEach((d, i) => { const l = lvl(d), t = i * 0.5, last = segs[segs.length - 1]; if (last && last.level === l) last.end = round(Math.min(dur, t + 0.5), 2); else segs.push({ start: round(t, 2), end: round(Math.min(dur, t + 0.5), 2), level: l }); });
+  const merged = []; for (const s of segs) { const p = merged[merged.length - 1]; if (p && s.end - s.start < 1) p.end = s.end; else merged.push({ ...s }); }
+  segs = []; for (const s of merged) { const p = segs[segs.length - 1]; if (p && p.level === s.level) p.end = s.end; else segs.push({ ...s }); }
+  const LBL = { strong: (s) => (s.start < 1 ? "mocny początek" : "atrakcyjny, dynamiczny fragment"), good: () => "dobra dynamika", drop: () => "tempo spada — możliwy spadek zainteresowania", weak: () => "dłuższy statyczny lub słaby fragment — skróć albo zmień kadr" };
+  segs.forEach((s) => (s.label = LBL[s.level](s)));
+  const strengths = [], weaknesses = [];
+  if (m.avgSharpness > 0.6) strengths.push("Ostry, czytelny obraz w większości ujęć.");
+  if (m.firstCutAt !== null && m.firstCutAt <= 2) strengths.push("Szybkie pierwsze cięcie — dobre tempo otwarcia.");
+  if (m.aspectOk) strengths.push("Prawidłowy pionowy format 9:16.");
+  if (m.avgShot >= 1 && m.avgShot <= 2.8) strengths.push("Średnia długość ujęć dobrze pasuje do krótkiej formy.");
+  if (audio?.lufs != null && audio.lufs > -18 && audio.lufs < -9) strengths.push("Prawidłowa głośność audio.");
+  if (m.darkRatio > 0.2) weaknesses.push("Duża część materiału jest niedoświetlona.");
+  if (m.blurryRatio > 0.2) weaknesses.push("W materiale są nieostre fragmenty.");
+  if (m.longest.length > 4.5) weaknesses.push(`Najdłuższe ujęcie trwa ${pl(m.longest.length)} s — spowalnia tempo.`);
+  if (!m.aspectOk) weaknesses.push("Materiał nie jest w formacie 9:16.");
+  if (m.firstCutAt === null || m.firstCutAt > 3) weaknesses.push("Pierwsze cięcie pojawia się późno — słaby hook.");
+  return {
+    metrics: m, categories, total, scaled: true, findings: F, retention: { points: pts, segments: segs, basis: scenes.some((s) => s.ai?.interest != null) ? "pomiar + AI" : "pomiar" },
+    optimal: { sec: Math.round(clamp(Math.min(dur, (rlo + rhi) / 2), Math.min(rlo, dur), rhi)), note: `Zalecana długość dla wybranego celu i platformy: ${rlo}–${rhi} s.` },
+    strengths, weaknesses, fixes: F.filter((x) => x.severity !== "GOOD").sort((a, b) => a.priority - b.priority).slice(0, 5).map((x) => x.suggestion),
+    summary: `Analiza techniczna: ${pl(dur)} s, ${m.cuts} cięć, średnio ${pl(m.avgShot)} s na ujęcie. ${weaknesses[0] || strengths[0] || ""} Ocena treści (przekaz, napisy, CTA na ekranie) wymaga AI.`,
+  };
+}
+
+/* ═════════════ AI (Claude przez konto widza) ═════════════ */
+const AI_RULES = `Zasady rzetelności: opisuj wyłącznie to, co widać na klatkach lub wynika z danych pomiarowych. Nie wymyślaj cen, promocji, lokalizacji, marek ani obietnic skuteczności. Nie proponuj ujęć ani napisów sugerujących efekt, którego nie ma w materiale. Pisz po polsku, konkretnie: zamiast ogólników podawaj instrukcje montażowe z czasami. Ocena to prognoza jakości kreatywnej, nie gwarancja wyników.`;
+async function aiAnalyzeReel(ctx, images, onText, signal) {
+  const tech = {
+    dlugosc_s: round(ctx.info.duration, 2), rozdzielczosc: `${ctx.info.width}x${ctx.info.height}`,
+    sceny: ctx.scenes.map((s) => ({ index: s.index, start: s.start, end: s.end, ruch: round(s.motion, 2), ostrosc: round(s.sharpness, 2), jasnosc: round(s.brightness, 2) })),
+    metryki: { ciecia: ctx.heur.metrics.cuts, srednie_ujecie_s: ctx.heur.metrics.avgShot, pierwsze_ciecie_s: ctx.heur.metrics.firstCutAt, ruch_pierwsze_3s: ctx.heur.metrics.motionFirst3s },
+    audio: ctx.audio && !ctx.audio.silent ? { lufs: ctx.audio.lufs, bpm: ctx.audio.tempo.bpm, cisza: ctx.audio.silences, wzrosty_energii_s: ctx.audio.rises } : "brak dźwięku",
+  };
+  const prompt = `Jesteś zespołem ekspertów: montażystą krótkich reklam, specjalistą od Instagram Reels/TikToka/YouTube Shorts i marketerem branży car detailing. Oceniasz rolkę reklamową studia detailingowego.
+Cel rolki: ${GOALS[ctx.goal]}. Platforma: ${PLATFORMS[ctx.platform].label}. Usługa: ${SERVICES[ctx.service]}.${ctx.cta ? ` CTA studia: „${ctx.cta}”.` : ""}
+${AI_RULES}
+
+POMIARY TECHNICZNE (z przeglądarki): ${JSON.stringify(tech)}
+
+OBRAZY (w tej kolejności): ${images.map((im, i) => `obraz ${i + 1} = klatka t=${tc(im.t)} (scena ${im.scene})`).join("; ")}.
+
+SKALA (suma = wynik 0–100, bądź wymagający; przeciętna rolka 50–65): hook 0–25 (czy 1–3 s zatrzymują kciuk), visual 0–20 (światło, połysk, ostrość, detale, premium), clarity 0–15 (czy widać, jaka usługa i jaka wartość), pacing 0–15 (tempo, długość ujęć, kolejność, długość całości), cta 0–15 (napis/plansza/narracja zachęcająca do kontaktu), captions 0–10 (czy napisy są, czytelne, w bezpiecznych strefach).
+
+Odpowiedz WYŁĄCZNIE jednym obiektem JSON o kształcie:
+{"scenes":[{"index":0,"description":"co widać","category":"result|before|polishing|coating|ppf|washing|decon|interior|upholstery|detail|wheels|water|worker|reveal|studio|other","interest":0,"quality":0,"hook":0,"text":null}],
+"scores":{"hook":{"score":0,"why":""},"visual":{"score":0,"why":""},"clarity":{"score":0,"why":""},"pacing":{"score":0,"why":""},"cta":{"score":0,"why":""},"captions":{"score":0,"why":""}},
+"summary":"2–3 zdania","strengths":[""],"weaknesses":[""],"fixes":["max 6, od najważniejszej"],"optimal":{"seconds":15,"why":""},
+"questions":[{"id":1,"answer":"","verdict":"yes|partly|no|unknown"}],
+"findings":[{"start":0,"end":2,"severity":"GOOD|WARN|BAD","category":"hook|visual|clarity|pacing|cta|captions|audio|structure","shot":"opis ujęcia","problem":null,"reason":null,"suggestion":"konkretna instrukcja z czasami","caption":null,"newDuration":null,"priority":1}],
+"hooks":[{"type":"wow|problem|curiosity|premium|educational","text":"","shot":"","sourceStart":null,"sourceEnd":null,"needsNewFootage":true,"duration":1.5,"animation":"pop|fade|slide","musicIn":"","why":""}],
+"missingShots":[{"name":"","what":"","angle":"","movement":"","sourceLength":"","editLength":"","lighting":"","placement":"","why":""}],
+"captions":[{"text":"","start":0,"end":1.5,"kind":"hook|process|result|benefit|cta"}],
+"music":{"mood":"","tempo":"","bpmMin":110,"bpmMax":124,"start":"","accents":[""],"cutSync":"","recommendation":""},
+"onScreenText":[{"start":0,"end":1,"text":""}]}
+Wymagania (pisz zwięźle — każde pole tekstowe maks. 1–2 zdania): w "scenes" tylko sceny widoczne na obrazach (te same indeksy); interest/quality/hook to 0–10; findings z czasami zgodnymi ze scenami, 6–14 uwag (najważniejsze momenty, dobre i złe), priorytet 1–5 (1 najważniejszy); dokładnie 13 krótkich odpowiedzi w "questions" (id 1–13, maks. 25 słów każda) na pytania: ${QUESTIONS.map((q, i) => `${i + 1}) ${q}`).join(" ")}; dokładnie 5 hooków (po jednym z typów); jeśli hook używa istniejącego ujęcia, podaj sourceStart/sourceEnd i needsNewFootage=false; 3–5 napisów (ostatni CTA); 3–5 brakujących ujęć w "missingShots"; onScreenText = napisy widoczne na klatkach (lub pusta lista).`;
+  return CAP.sample.json(prompt, { images: images.map((x) => x.blob), modelTier: "default", onText, signal, cache: false });
+}
+function num(v, a, b, d) { const n = Number(v); return Number.isFinite(n) ? clamp(n, a, b) : d; }
+function str(v, d = "") { return typeof v === "string" ? v.slice(0, 600) : d; }
+function mergeAi(rep, ai, ctx) {
+  const dur = ctx.info.duration;
+  if (!ai || typeof ai !== "object") return rep;
+  for (const s of Array.isArray(ai.scenes) ? ai.scenes : []) {
+    const sc = ctx.scenes.find((x) => x.index === Number(s.index));
+    if (sc) sc.ai = { description: str(s.description), category: SHOTS[s.category] ? s.category : "other", interest: num(s.interest, 0, 10, 5), quality: num(s.quality, 0, 10, 5), hook: num(s.hook, 0, 10, 3), text: s.text ? str(s.text) : null };
+  }
+  const sc = ai.scores || {};
+  const cats = Object.keys(CAT_MAX).map((k) => ({ key: k, label: CAT_LABEL[k], score: round(num(sc[k]?.score, 0, CAT_MAX[k], 0), 1), max: CAT_MAX[k], why: str(sc[k]?.why, "—"), basis: "AI" }));
+  const findings = (Array.isArray(ai.findings) ? ai.findings : []).map((f) => ({
+    id: uid("f"), start: round(num(f.start, 0, dur, 0), 2), end: round(num(Math.max(Number(f.end) || 0, (Number(f.start) || 0) + 0.2), 0, dur, dur), 2),
+    severity: ["GOOD", "WARN", "BAD"].includes(f.severity) ? f.severity : "WARN", category: str(f.category, "structure"), shot: str(f.shot, "—"), problem: f.problem ? str(f.problem) : null, reason: f.reason ? str(f.reason) : null,
+    suggestion: str(f.suggestion, "—"), caption: f.caption ? str(f.caption) : null, newDuration: f.newDuration == null ? null : num(f.newDuration, 0.3, 10, null), priority: Math.round(num(f.priority, 1, 5, 3)), source: "AI",
+  })).filter((f) => f.end > f.start);
+  const tech = rep.findings.filter((f) => f.category === "audio" || (f.category === "visual" && f.severity !== "GOOD" && /ciemny|Nieostry/.test(f.shot)));
+  const hooks = (Array.isArray(ai.hooks) ? ai.hooks : []).slice(0, 6).map((h) => ({ type: HOOK_TYPES[h.type] ? h.type : "wow", text: str(h.text), shot: str(h.shot), sourceStart: h.sourceStart == null ? null : num(h.sourceStart, 0, dur, null), sourceEnd: h.sourceEnd == null ? null : num(h.sourceEnd, 0, dur, null), needsNewFootage: h.needsNewFootage === true, duration: num(h.duration, 0.6, 5, 1.5), animation: str(h.animation, "pop"), musicIn: str(h.musicIn), why: str(h.why), src: "AI" }));
+  const q = Array.isArray(ai.questions) ? ai.questions : [];
+  return {
+    ...rep, mode: "AI", categories: cats, total: Math.round(cats.reduce((a, c) => a + c.score, 0)), scaled: false,
+    findings: [...findings, ...tech].sort((a, b) => a.start - b.start || a.priority - b.priority),
+    summary: str(ai.summary, rep.summary), strengths: (ai.strengths || []).slice(0, 8).map((x) => str(x)), weaknesses: (ai.weaknesses || []).slice(0, 8).map((x) => str(x)), fixes: (ai.fixes || []).slice(0, 7).map((x) => str(x)),
+    optimal: { sec: Math.round(num(ai.optimal?.seconds, 5, 180, rep.optimal.sec)), note: str(ai.optimal?.why, rep.optimal.note) },
+    questions: QUESTIONS.map((qq, i) => { const a = q.find((x) => Number(x.id) === i + 1) || q[i] || {}; return { q: qq, answer: str(a.answer, "—"), verdict: ["yes", "partly", "no"].includes(a.verdict) ? a.verdict : "unknown" }; }),
+    hooks: hooks.length ? hooks : rep.hooks,
+    missing: { src: "AI", items: (ai.missingShots || []).slice(0, 8).map((m) => ({ name: str(m.name), what: str(m.what), angle: str(m.angle), movement: str(m.movement), sourceLength: str(m.sourceLength), editLength: str(m.editLength), lighting: str(m.lighting), placement: str(m.placement), why: str(m.why) })) },
+    captions: { src: "AI", items: (ai.captions || []).slice(0, 6).map((c) => ({ text: str(c.text).slice(0, 80), start: round(num(c.start, 0, dur, 0), 2), end: round(num(c.end, 0, dur, 1.5), 2), kind: str(c.kind, "process") })).filter((c) => c.text) },
+    music: ai.music ? { src: "AI", mood: str(ai.music.mood), tempo: str(ai.music.tempo), bpm: `${num(ai.music.bpmMin, 50, 200, 100)}–${num(ai.music.bpmMax, 50, 200, 125)} BPM`, start: str(ai.music.start), accents: (ai.music.accents || []).slice(0, 5).map((x) => str(x)), cutSync: str(ai.music.cutSync), rec: str(ai.music.recommendation), measured: rep.music.measured } : rep.music,
+    onScreen: (ai.onScreenText || []).slice(0, 10).map((o) => ({ start: num(o.start, 0, dur, 0), text: str(o.text) })).filter((o) => o.text),
+  };
+}
+function templateExtras(rep, ctx) {
+  const best = [...ctx.scenes].sort((a, b) => b.interest - a.interest)[0];
+  rep.hooks = HOOKS[ctx.service].map(([type, text, shot]) => ({ type, text, shot, sourceStart: type === "wow" && best ? best.start : null, sourceEnd: type === "wow" && best ? Math.min(best.end, best.start + 1.6) : null, needsNewFootage: null, duration: 1.6, animation: type === "wow" ? "pop" : "fade", musicIn: "Od pierwszej klatki, akcent na pierwszym cięciu", why: "Sprawdzony format dla tej usługi (szablon).", src: "szablon" }));
+  rep.missing = { src: "szablon", items: SHOT_GUIDES[ctx.service].map(([name, what, angle, movement, sourceLength, editLength, lighting, placement, why]) => ({ name, what, angle, movement, sourceLength, editLength, lighting, placement, why })) };
+  const t = CAPTIONS[ctx.service], d = ctx.info.duration, cta = ctx.cta || "Umów termin już dziś";
+  rep.captions = { src: "szablon", items: [{ text: t.hook[0], start: 0, end: Math.min(1.8, d), kind: "hook" }, { text: t.process[0], start: d * 0.35, end: d * 0.35 + 2, kind: "process" }, { text: t.result[0], start: d * 0.65, end: d * 0.65 + 2, kind: "result" }, { text: cta, start: Math.max(0, d - 2.4), end: d, kind: "cta" }].map((c) => ({ ...c, start: round(clamp(c.start, 0, d), 2), end: round(clamp(c.end, 0, d), 2) })) };
+  const mood = ctx.goal === "prestige" ? MOODS.prestige : ctx.goal === "engagement" ? MOODS.engagement : MOODS.default;
+  const a = ctx.audio;
+  rep.music = { src: "szablon", mood: mood[0], tempo: "", bpm: `${mood[1]}–${mood[2]} BPM`, start: "Muzyka od pierwszej klatki; pierwsze cięcie na mocny akcent.", accents: (a?.rises || []).map((r) => `Wzrost energii w ${pl(r)} s — dobre miejsce na mocne cięcie`), cutSync: a?.tempo?.bpm ? `Wykryte tempo ${pl(a.tempo.bpm)} BPM — tnij co ${pl((60 / a.tempo.bpm) * 2, 2)} s (co 2 beaty).` : "Tnij na mocne akcenty muzyki (co 2 lub 4 beaty).", rec: `${mood[3]} (rekomendacja z biblioteki stylów).`, measured: a && !a.silent ? { bpm: a.tempo.bpm, lufs: a.lufs, rises: a.rises } : null };
+  rep.questions = null; rep.onScreen = [];
+  return rep;
+}
+
+/* ═════════════ Plan montażu (wspólny dla „Popraw rolkę” i auto montażu) ═════════════ */
+const shotsWord = (n) => `${n} ${n === 1 ? "ujęcie" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "ujęcia" : "ujęć"}`;
+const segLen = (s) => (s.out - s.in) / (s.speed || 1);
+function layout(plan) { let t = 0; return plan.segs.map((s) => { const e = { seg: s, start: t, end: t + segLen(s) }; t = e.end; return e; }); }
+const planTotal = (plan) => plan.segs.reduce((a, s) => a + segLen(s), 0);
+function capTimes(plan) {
+  const L = layout(plan), total = planTotal(plan);
+  return plan.caps.map((c) => {
+    if (c.segId) { const e = L.find((x) => x.seg.id === c.segId); if (e) { const st = e.start + (c.offset || 0.08); return { ...c, start: st, end: Math.min(total, st + c.dur) }; } }
+    return { ...c, start: c.start ?? 0, end: Math.min(total, (c.start ?? 0) + c.dur) };
+  }).filter((c) => c.start < total - 0.1);
+}
+function shrinkTo(plan, target, minShot = 0.6) {
+  for (let g = 0; g < 300 && planTotal(plan) > target + 0.05; g++) {
+    const c = plan.segs.map((s, i) => ({ s, i, d: segLen(s) })).filter((x) => x.d > minShot + 0.05 && !(x.i === 0 && plan.segs.length > 1));
+    if (!c.length) break;
+    c.sort((a, b) => b.d - a.d);
+    const cut = Math.max(0.05, Math.min(planTotal(plan) - target, c[0].d - Math.max(minShot, (c[1]?.d ?? minShot) - 0.01)));
+    const s = c[0].s, sc = cut * (s.speed || 1);
+    s.in = round(s.in + sc / 2, 3); s.out = round(s.out - sc / 2, 3);
+  }
+}
+function addCap(plan, segIdx, text, kind, preset, minLen = 1.3) {
+  const L = layout(plan), e = L[segIdx];
+  if (!e || !text) return;
+  plan.caps.push({ id: uid("c"), text: text.slice(0, 80), kind, segId: e.seg.id, offset: 0.08, dur: round(clamp(Math.max(minLen, e.end - e.start - 0.15), 1, 2.6), 2), preset });
+}
+/** „Popraw rolkę”: nowy hook z najmocniejszej sceny, skrócone/usunięte ujęcia, napisy i CTA. */
+function fixPlan(r, opts) {
+  const { scenes, samples, src } = r.ctx, changes = [];
+  const scoreFn = (n) => 0.55 * n.sharpness + 0.45 * Math.min(1, n.motion * 1.6);
+  const sco = (s) => (s.ai?.interest ?? s.interest) * 0.6 + (s.ai?.quality ?? s.sharpness * 10) * 0.4;
+  const hp = (s) => s.ai?.hook ?? s.interest;
+  const name = (s) => s.ai?.description || `ujęcie ${s.index + 1} (${tc(s.start, false)}–${tc(s.end, false)})`;
+  const weak = (s) => s.sharpness < 0.28 || s.brightness < 0.1 || r.findings.some((f) => f.severity === "BAD" && f.category === "visual" && f.start <= s.start + 0.2 && f.end >= s.end - 0.2);
+  const first = scenes[0];
+  const hookBad = r.findings.some((f) => f.category === "hook" && f.severity === "BAD") || hp(first) < 5;
+  const cands = [...scenes].sort((a, b) => hp(b) + sco(b) * 0.3 - (hp(a) + sco(a) * 0.3));
+  const hookS = hookBad && opts.mode === "full" ? cands.find((s) => s.end - s.start >= 0.8 && !weak(s)) || first : first;
+  const hl = clamp(Math.min(1.6, hookS.end - hookS.start), 0.8, 2);
+  const hw = hookS === first && !hookBad ? { start: first.start, end: first.start + Math.min(first.end - first.start, 2.6) } : bestWindow(samples, hookS.start, hookS.end, hl, scoreFn);
+  if (hookS !== first) changes.push(`Nowy początek: najmocniejszy fragment ${tc(hw.start)}–${tc(hw.end)} (${name(hookS)}) zamiast ${name(first)}.`);
+  else if (hookBad) changes.push(`Początek skrócony do ${pl(hw.end - hw.start)} s.`);
+  const plan = { kind: "fix", segs: [{ id: uid("g"), src: src.id, in: round(hw.start, 3), out: round(hw.end, 3), speed: 1, role: "hook", label: name(hookS) }], caps: [], muteOriginal: false, keepAudio: null, music: null, preset: opts.preset, logo: null };
+  const last = scenes[scenes.length - 1];
+  const weakSegs = r.retention.segments.filter((s) => s.level === "weak" || s.level === "drop");
+  for (const s of scenes) {
+    const isLast = s === last;
+    if (weak(s) && !isLast && scenes.length > 2) { changes.push(`Usunięto słaby technicznie fragment: ${name(s)}.`); continue; }
+    let a = s.start, b = s.end;
+    if (s === hookS) { const bef = hw.start - s.start, aft = s.end - hw.end; if (bef < 1 && aft < 1) continue; if (aft >= bef) a = hw.end + 0.1; else b = hw.start - 0.1; }
+    const len = b - a; if (len < 0.4) continue;
+    const inWeak = weakSegs.some((w) => w.start <= a + 0.3 && w.end >= b - 0.3);
+    const cap = isLast ? 3 : inWeak ? 1.4 : opts.mode === "weak" ? Math.max(2.6, Math.min(len, 3.5)) : 2.6;
+    if (len > cap + 0.2) { const w = bestWindow(samples, a, b, cap, scoreFn); changes.push(`Skrócono ${name(s)} z ${pl(len)} s do ${pl(w.end - w.start)} s (najlepszy fragment).`); a = w.start; b = w.end; }
+    plan.segs.push({ id: uid("g"), src: src.id, in: round(a, 3), out: round(b, 3), speed: 1, role: isLast ? "cta" : "process", label: name(s) });
+  }
+  shrinkTo(plan, Math.min(opts.target, planTotal(plan)));
+  const after = planTotal(plan);
+  if (Math.abs(after - r.ctx.info.duration) > 0.5) changes.push(`Długość: ${pl(r.ctx.info.duration)} s → ${pl(after)} s.`);
+  const speech = false;
+  if (r.ctx.audio && !r.ctx.audio.silent && !speech) { plan.muteOriginal = true; plan.keepAudio = { src: src.id, from: 0 }; changes.push("Ścieżka dźwiękowa oryginału gra w ciągłości (bez poszatkowania muzyki)."); }
+  if (opts.captions) {
+    const t = CAPTIONS[r.ctx.service], ai = r.captions?.src === "AI" ? r.captions.items : [];
+    const hookTxt = r.hooks.find((h) => h.needsNewFootage === false)?.text || ai.find((c) => c.kind === "hook")?.text || t.hook[0];
+    addCap(plan, 0, hookTxt, "title", opts.preset, 1.4);
+    for (const c of ai.filter((x) => x.kind !== "hook" && x.kind !== "cta")) {
+      const idx = plan.segs.findIndex((g, i) => i > 0 && i < plan.segs.length - 1 && c.start >= g.in - 0.3 && c.start < g.out);
+      if (idx > 0 && !plan.caps.some((x) => x.segId === plan.segs[idx].id)) addCap(plan, idx, c.text, "caption", opts.preset);
+    }
+    if (plan.caps.length < 2 && plan.segs.length > 2) addCap(plan, Math.floor(plan.segs.length / 2), t.process[0], "caption", opts.preset);
+    const cta = r.ctx.cta || ai.find((c) => c.kind === "cta")?.text || "Umów termin już dziś";
+    addCap(plan, plan.segs.length - 1, cta, "cta", opts.preset, 1.8);
+    changes.push(`Dodano ${plan.caps.length} napisy, w tym CTA na końcu: „${cta}”.`);
+  }
+  plan.segs[plan.segs.length - 1].fadeOut = 0.35;
+  plan.changes = changes;
+  return plan;
+}
+const STRUCT = {
+  viral: { pace: [0.8, 1.4], k: 1, preset: "bold_viral", sections: [["process", 0.5, ["polishing", "coating", "ppf", "washing", "decon", "interior", "upholstery", "worker"]], ["detail", 0.2, ["detail", "wheels", "water"]], ["result", 0.3, ["result", "reveal", "water"]]], label: "Wersja A — VIRAL", sum: "Mocny hook, szybkie cięcia, wyraziste napisy.", use: "Zasięgi i nowi odbiorcy (TikTok, Reels)." },
+  premium: { pace: [1.6, 2.8], k: 1.2, preset: "luxury", sections: [["process", 0.35, ["polishing", "coating", "ppf", "washing", "decon", "interior", "upholstery", "worker"]], ["detail", 0.3, ["detail", "wheels", "water"]], ["result", 0.35, ["result", "reveal", "water"]]], label: "Wersja B — PREMIUM", sum: "Wolniejsze ujęcia, eleganckie napisy, mniej efektów.", use: "Prestiż marki i klienci premium." },
+  sales: { pace: [1.1, 2.0], k: 1, preset: "clean_modern", sections: [["before", 0.2, ["before"]], ["process", 0.35, ["polishing", "coating", "ppf", "washing", "decon", "interior", "upholstery", "worker"]], ["result", 0.3, ["result", "reveal", "water"]], ["detail", 0.15, ["detail", "wheels", "water"]]], label: "Wersja C — SALES", sum: "Problem → proces → rezultat → korzyść → CTA.", use: "Pozyskiwanie klientów i wiadomości." },
+};
+/** Auto montaż z wielu klipów dla danego stylu. */
+function montagePlan(cands, samplesBy, style, opts) {
+  const S = STRUCT[style], changes = [];
+  const shotMin = S.pace[0] * S.k, shotMax = S.pace[1] * S.k, target = opts.target;
+  const hasCat = cands.some((c) => c.category);
+  const usable = cands.filter((c) => c.end - c.start >= 0.4);
+  const strong = usable.filter((c) => c.sharpness >= 0.3 && c.brightness >= 0.1);
+  const pool = strong.length >= Math.max(3, Math.ceil(target / shotMax)) ? strong : usable;
+  if (pool.length < usable.length) changes.push(`Odrzucono ${usable.length - pool.length} słabych technicznie fragmentów (nieostre lub ciemne).`);
+  const base = (c) => c.interest * 0.55 + c.quality * 0.35 + (c.brightness < 0.15 ? -2 : 0);
+  const used = [];
+  const score = style === "viral" ? (n) => 0.6 * Math.min(1, n.motion * 1.8) + 0.4 * n.sharpness : style === "premium" ? (n) => 0.65 * n.sharpness + 0.35 * (1 - Math.min(1, Math.abs(n.motion - 0.2) * 2.5)) : (n) => 0.5 * n.sharpness + 0.5 * Math.min(1, n.motion * 1.6);
+  const pick = (c, len) => {
+    const free = [[c.start, c.end]];
+    for (const u of used.filter((x) => x.src === c.src)) for (let i = free.length - 1; i >= 0; i--) { const [a, b] = free[i]; if (u.end <= a || u.start >= b) continue; free.splice(i, 1); if (u.start - a >= 0.4) free.push([a, u.start]); if (b - u.end >= 0.4) free.push([u.end, b]); }
+    let best = null;
+    for (const [a, b] of free) { if (b - a < Math.min(len, 0.5)) continue; const w = bestWindow(samplesBy[c.src], a, b, Math.min(len, b - a), score); const ws = w.score ?? 0; if (!best || ws > best.score) best = { ...w, score: ws }; }
+    return best;
+  };
+  const segs = [];
+  const take = (c, len, role) => { const w = pick(c, len); if (!w || w.end - w.start < 0.35) return null; used.push({ src: c.src, start: w.start - 0.1, end: w.end + 0.1 }); const g = { id: uid("g"), src: c.src, in: round(w.start, 3), out: round(w.end, 3), speed: 1, role, label: c.description || (c.category ? SHOTS[c.category] : `${c.name.replace(/\.[^.]+$/, "")} · ${tc(w.start, false)}`), cand: c }; return g; };
+  const hookCats = style === "sales" ? ["before", "result", "reveal", "water", "detail"] : ["result", "reveal", "water", "detail", "before"];
+  const hookC = [...pool].sort((a, b) => { const bo = (c) => (c.category && hookCats.includes(c.category) ? 2 - hookCats.indexOf(c.category) * 0.2 : 0); return b.hook + bo(b) + base(b) * 0.3 - (a.hook + bo(a) + base(a) * 0.3); });
+  const hookLen = style === "viral" ? clamp(shotMin * 1.3, 0.9, 1.4) : style === "premium" ? clamp(shotMax * 0.8, 1.6, 2.4) : clamp((shotMin + shotMax) / 2, 1.2, 1.8);
+  for (const c of hookC) { const g = take(c, hookLen, "hook"); if (g) { segs.push(g); changes.push(`Hook: ${g.label}${c.description || c.category ? ` (plik „${c.name}”)` : ""} — najwyższy potencjał na przyciągnięcie uwagi.`); break; } }
+  const ctaLen = clamp(shotMax * 1.1, 1.8, 3);
+  const endC = [...pool].filter((c) => !hasCat || ["result", "reveal", "water", "detail"].includes(c.category)).sort((a, b) => base(b) - base(a))[0] || [...pool].sort((a, b) => b.order - a.order)[0];
+  const budget = Math.max(0, target - hookLen - ctaLen), maxOrd = Math.max(...pool.map((c) => c.order));
+  for (const [role, w, cats] of S.sections) {
+    const bud = budget * w; let filled = 0, lastSrc = null;
+    let cs = pool.filter((c) => (hasCat ? c.category && cats.includes(c.category) : role === "result" ? c.order / Math.max(1, maxOrd) >= 0.5 : role === "before" ? c.order / Math.max(1, maxOrd) <= 0.25 : c.order / Math.max(1, maxOrd) < 0.75));
+    cs.sort((a, b) => base(b) - base(a));
+    for (let g = 0, k = 0; g < 60 && filled < bud - shotMin * 0.5; g++) {
+      const pref = cs.filter((c) => c !== endC && c.src !== lastSrc);
+      const order = [...pref, ...cs.filter((c) => c !== endC && !pref.includes(c)), ...cs.filter((c) => c === endC)];
+      const ideal = shotMin + (shotMax - shotMin) * (0.35 + 0.3 * ((k * 7) % 10) / 10);
+      const len = clamp(Math.min(ideal, bud - filled), shotMin, shotMax);
+      let got = null;
+      for (const c of order) { got = take(c, len, role); if (got) { cs = [...cs.filter((x) => x !== c), c]; lastSrc = c.src; break; } }
+      if (!got) break;
+      segs.push(got); filled += segLen(got); k++;
+    }
+    if (filled > 0) changes.push(`Sekcja „${{ process: "proces", detail: "detale", result: "efekt", before: "stan przed" }[role]}”: ${shotsWord(segs.filter((s) => s.role === role).length)}, ok. ${pl(filled)} s.`);
+  }
+  if (endC) { const g = take(endC, ctaLen, "cta"); if (g) { segs.push(g); changes.push("Zakończenie: dłuższe ujęcie efektu pod napis z CTA."); } }
+  const plan = { kind: "montage", style, segs, caps: [], muteOriginal: Boolean(opts.music), keepAudio: null, music: opts.music ? { from: 0, volume: 0.85 } : null, preset: S.preset, logo: null };
+  for (let g = 0; g < 30 && planTotal(plan) < target - shotMin; g++) {
+    const extra = [...pool].sort((a, b) => base(b) - base(a)).find((c) => c !== endC && pick(c, shotMin));
+    if (!extra) break;
+    const gg = take(extra, clamp(target - planTotal(plan), shotMin, (shotMin + shotMax) / 2), "process"); if (!gg) break;
+    plan.segs.splice(Math.max(1, plan.segs.length - 1), 0, gg);
+  }
+  shrinkTo(plan, target, Math.max(0.4, shotMin * 0.8));
+  if (style === "premium") plan.segs.forEach((s, i) => { if (i > 0 && plan.segs[i - 1].role !== s.role) s.fadeIn = 0.3; });
+  plan.segs[plan.segs.length - 1].fadeOut = 0.4;
+  if (opts.music && opts.musicBeats?.length) {
+    const beats = opts.musicBeats; let t = 0;
+    for (let i = 0; i < plan.segs.length - 1; i++) { const s = plan.segs[i]; const end = t + segLen(s); const nb = beats.reduce((b, x) => (Math.abs(x - end) < Math.abs(b - end) ? x : b), beats[0]); const d = nb - end; if (Math.abs(d) <= Math.min(0.3, shotMin * 0.4) && Math.abs(d) > 0.02) { const nOut = s.out + d; const max = opts.durBySrc[s.src] ?? s.out; if (nOut > s.in + 0.3 && nOut <= max) s.out = round(nOut, 3); } t += segLen(s); }
+    changes.push(`Cięcia dopasowane do beatów muzyki${opts.musicBpm ? ` (${pl(opts.musicBpm)} BPM)` : ""}.`);
+  }
+  const t = CAPTIONS[opts.service], bank = opts.captions;
+  const roleIdx = (r) => plan.segs.findIndex((s) => s.role === r);
+  addCap(plan, 0, (style === "sales" ? bank?.hook?.[0] : bank?.hook?.[0]) || t.hook[0], "title", S.preset, 1.4);
+  const pi = roleIdx("process"); if (pi > 0) addCap(plan, pi, bank?.process?.[0] || t.process[0], "caption", S.preset);
+  const ri = roleIdx("result") > 0 ? roleIdx("result") : roleIdx("detail"); if (ri > 0 && ri !== plan.segs.length - 1) addCap(plan, ri, bank?.result?.[0] || t.result[0], "caption", S.preset);
+  const cta = opts.cta || bank?.cta?.[0] || "Umów termin już dziś";
+  addCap(plan, plan.segs.length - 1, cta, "cta", S.preset, 1.8);
+  changes.push(`Napisy: ${plan.caps.length} (${bank ? "propozycje AI" : "szablony dla usługi"}), CTA: „${cta}”.`);
+  if (opts.music) changes.push("Oryginalny dźwięk klipów wyciszony — prowadzi muzyka.");
+  plan.changes = changes;
+  return plan;
+}
+/** Prognoza techniczna dla nowego montażu (wirtualne próbki z wybranych fragmentów). */
+function scorePlan(plan, sourcesById, ctxBase) {
+  const L = layout(plan), samples = [], scenes = [];
+  L.forEach((e, i) => {
+    const src = sourcesById[e.seg.src];
+    const own = src.samples.filter((s) => s.t >= e.seg.in && s.t < e.seg.out).map((s, k) => ({ ...s, t: round(e.start + (s.t - e.seg.in) / (e.seg.speed || 1), 3), hd: k === 0 && i > 0 ? 0.6 : s.hd, ydif: k === 0 && i > 0 ? 40 : s.ydif }));
+    samples.push(...own);
+    const st = statsFor(src.samples, e.seg.in, e.seg.out);
+    scenes.push({ index: i, start: round(e.start, 2), end: round(e.end, 2), ...st, interest: e.seg.cand?.interest ?? interestOf(st) });
+  });
+  const total = planTotal(plan);
+  const r = runHeuristics({ scenes, samples, info: { duration: total, width: 1080, height: 1920 }, audio: ctxBase.audio, platform: ctxBase.platform, goal: ctxBase.goal });
+  return { total: r.total, cuts: Math.max(0, plan.segs.length - 1), avg: total / Math.max(1, plan.segs.length), dur: total, cats: r.categories };
+}
+
+/* ═════════════ Renderer: podgląd i eksport (canvas + MediaRecorder) ═════════════ */
+function wrapLines(ctx, text, maxW) {
+  const out = []; let line = "";
+  for (const w of text.split(/\s+/).filter(Boolean)) { const t = line ? `${line} ${w}` : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
+  if (line) out.push(line);
+  return out.length ? out : [text];
+}
+function drawCaption(ctx, c, t, W, H, platform) {
+  const P = PRESETS[c.preset] || PRESETS.clean_modern, k = W / 1080, local = t - c.start, dur = c.end - c.start;
+  if (local < 0 || local > dur) return;
+  const fo = Math.min(0.2, dur / 4);
+  let alpha = clamp((dur - local) / fo, 0, 1), scale = 1, dy = 0;
+  const anim = c.kind === "cta" && P.anim === "pop" ? "pop" : P.anim;
+  if (anim === "fade") alpha *= clamp(local / 0.22, 0, 1);
+  if (anim === "pop") { scale = local < 0.17 ? 0.7 + 0.36 * (local / 0.17) : local < 0.26 ? 1.06 - 0.06 * ((local - 0.17) / 0.09) : 1; alpha *= clamp(local / 0.06, 0, 1); }
+  if (anim === "slide") { dy = (1 - clamp(local / 0.28, 0, 1)) * 70 * k; alpha *= clamp(local / 0.16, 0, 1); }
+  const size = P.size * k * (c.kind === "cta" ? 1.05 : 1);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = `${P.weight} ${size}px "${P.font}", "Inter", sans-serif`;
+  if ("letterSpacing" in ctx) ctx.letterSpacing = `${P.ls * k}px`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const text = P.upper ? c.text.toLocaleUpperCase("pl-PL") : c.text;
+  const lines = wrapLines(ctx, text, 860 * k);
+  const lh = size * 1.2, safe = PLATFORMS[platform]?.safe || PLATFORMS.instagram.safe;
+  let cy = clamp(P.y * H, safe.top * k + (lines.length * lh) / 2, H - safe.bottom * k - (lines.length * lh) / 2) + dy;
+  const cx = W / 2;
+  ctx.translate(cx, cy); ctx.scale(scale, scale);
+  const y0 = -((lines.length - 1) * lh) / 2;
+  if (P.box) {
+    const wMax = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 36 * k, hTot = lines.length * lh + 20 * k;
+    ctx.fillStyle = "rgba(11,13,18,0.62)";
+    const x = -wMax / 2, y = y0 - lh / 2 - 10 * k, r = 8 * k;
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + wMax, y, x + wMax, y + hTot, r); ctx.arcTo(x + wMax, y + hTot, x, y + hTot, r); ctx.arcTo(x, y + hTot, x, y, r); ctx.arcTo(x, y, x + wMax, y, r); ctx.fill();
+  }
+  if (P.shadow) { ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = P.shadow * 2 * k; ctx.shadowOffsetX = P.shadow * k; ctx.shadowOffsetY = P.shadow * k; }
+  lines.forEach((l, i) => {
+    const y = y0 + i * lh;
+    if (P.outline) { ctx.lineWidth = P.outline * 2 * k; ctx.strokeStyle = "#000"; ctx.lineJoin = "round"; ctx.strokeText(l, 0, y); }
+    ctx.fillStyle = P.color; ctx.fillText(l, 0, y);
+  });
+  ctx.restore();
+}
+/* Jeden graf audio na całą stronę: element <video>/<audio> można podłączyć do Web Audio tylko raz. */
+let AUDIO = null;
+function audioGraph() {
+  if (AUDIO) { if (AUDIO.ctx.state === "suspended") AUDIO.ctx.resume().catch(() => {}); return AUDIO; }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const preview = ctx.createGain(), rec = ctx.createMediaStreamDestination();
+  preview.connect(ctx.destination);
+  AUDIO = { ctx, preview, rec, nodes: new Map() };
+  return AUDIO;
+}
+function gainFor(el) {
+  const A = audioGraph();
+  let g = A.nodes.get(el);
+  if (!g) { g = A.ctx.createGain(); g.gain.value = 0; try { A.ctx.createMediaElementSource(el).connect(g); } catch { /* już podłączony */ } g.connect(A.preview); g.connect(A.rec); A.nodes.set(el, g); }
+  return g;
+}
+const PLAYBACK = { audioBlocked: false };
+async function safePlay(el) {
+  try { await el.play(); return true; } catch (e) {
+    if (e?.name === "NotAllowedError" && !el.muted) { el.muted = true; PLAYBACK.audioBlocked = true; try { await el.play(); return true; } catch { return false; } }
+    return e?.name === "AbortError" ? !el.paused : false;
+  }
+}
+class Renderer {
+  constructor(sources) { this.sources = sources; this.stopFlag = false; }
+  drawFrame(ctx, el, seg, W, H) {
+    const vw = el.videoWidth || 1, vh = el.videoHeight || 1, s = Math.max(W / vw, H / vh) * (seg.zoom || 1);
+    const sw = W / s, sh = H / s, sx = (vw - sw) * (seg.cx ?? 0.5), sy = (vh - sh) * (seg.cy ?? 0.5);
+    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, W, H);
+  }
+  overlay(ctx, plan, e, t, W, H, platform, logoImg) {
+    const local = t - e.start, d = e.end - e.start;
+    let black = 0;
+    if (e.seg.fadeIn && local < e.seg.fadeIn) black = 1 - local / e.seg.fadeIn;
+    if (e.seg.fadeOut && d - local < e.seg.fadeOut) black = Math.max(black, 1 - (d - local) / e.seg.fadeOut);
+    if (black > 0) { ctx.fillStyle = `rgba(0,0,0,${clamp(black, 0, 1)})`; ctx.fillRect(0, 0, W, H); }
+    for (const c of capTimes(plan)) drawCaption(ctx, c, t, W, H, platform);
+    const total = planTotal(plan);
+    if (logoImg && t > total - 2.5) { const lw = W * 0.28, lh = (logoImg.naturalHeight / logoImg.naturalWidth) * lw; ctx.globalAlpha = clamp((t - (total - 2.5)) / 0.3, 0, 1); ctx.drawImage(logoImg, W / 2 - lw / 2, H * 0.17 - lh / 2, lw, lh); ctx.globalAlpha = 1; }
+  }
+  async drawAt(plan, t, canvas, platform, logoImg) {
+    const ctx = canvas.getContext("2d"), W = canvas.width, H = canvas.height, L = layout(plan);
+    const e = L.find((x) => t >= x.start && t < x.end) || L[L.length - 1];
+    if (!e) { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H); return; }
+    const el = this.sources[e.seg.src].els[0];
+    await seek(el, e.seg.in + (t - e.start) * (e.seg.speed || 1));
+    this.drawFrame(ctx, el, e.seg, W, H);
+    this.overlay(ctx, plan, e, t, W, H, platform, logoImg);
+  }
+  /** Odtwarza plan na canvasie (podgląd albo nagrywanie). Zwraca Blob przy nagrywaniu. */
+  async play(plan, canvas, o) {
+    this.stopFlag = false;
+    const A = audioGraph();
+    for (const s of Object.values(this.sources)) s.els.forEach(gainFor);
+    const ctx = canvas.getContext("2d"), W = canvas.width, H = canvas.height, L = layout(plan), total = planTotal(plan);
+    A.preview.gain.value = o.record ? 0 : 1;
+    let recorder = null, chunks = [], mime = "";
+    if (o.record) {
+      const types = ["video/mp4;codecs=avc1.640028,mp4a.40.2", "video/mp4;codecs=avc1.4D401F,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+      mime = types.find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+      if (!window.MediaRecorder) throw new Error("Ta przeglądarka nie obsługuje nagrywania wideo (MediaRecorder). Użyj Chrome, Edge lub Safari.");
+      const stream = new MediaStream([...canvas.captureStream(30).getVideoTracks(), ...A.rec.stream.getAudioTracks()]);
+      recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: o.bitrate || 8_000_000, audioBitsPerSecond: 160_000 });
+      recorder.ondataavailable = (ev) => ev.data.size && chunks.push(ev.data);
+    }
+    // ciągła ścieżka (muzyka albo audio oryginału)
+    let cont = null, contGain = null;
+    if (plan.music && o.musicEl) { cont = o.musicEl; contGain = gainFor(cont); contGain.gain.value = plan.music.volume ?? 0.85; await seek(cont, plan.music.from || 0); }
+    else if (plan.keepAudio && this.sources[plan.keepAudio.src]) { cont = this.sources[plan.keepAudio.src].contEl ||= makeVideo(this.sources[plan.keepAudio.src].url); contGain = gainFor(cont); contGain.gain.value = 1; await seek(cont, plan.keepAudio.from || 0); }
+    // pierwszy kadr przed startem
+    const el0 = this.sources[L[0].seg.src].els[0]; await seek(el0, L[0].seg.in); this.drawFrame(ctx, el0, L[0].seg, W, H); this.overlay(ctx, plan, L[0], 0, W, H, o.platform, o.logoImg);
+    if (recorder) recorder.start(500);
+    if (cont) await safePlay(cont);
+    const t0 = performance.now();
+    for (let i = 0; i < L.length && !this.stopFlag; i++) {
+      const e = L[i], s = this.sources[e.seg.src], el = s.els[i % 2], other = L[i + 1];
+      if (i === 0) await seek(el, e.seg.in);
+      if (other) { const ne = this.sources[other.seg.src].els[(i + 1) % 2]; seek(ne, other.seg.in).catch(() => {}); }
+      el.playbackRate = e.seg.speed || 1;
+      for (const [node, g] of A.nodes) if (node !== cont) g.gain.value = 0;
+      gainFor(el).gain.value = plan.muteOriginal ? 0 : (e.seg.volume ?? 1);
+      if (Math.abs(el.currentTime - e.seg.in) > 0.08) await seek(el, e.seg.in);
+      if (!(await safePlay(el))) { this.stop(); cont?.pause(); recorder?.state === "recording" && recorder.stop(); throw new Error("Przeglądarka zablokowała odtwarzanie wideo. Kliknij ponownie przycisk odtwarzania lub eksportu."); }
+      while (!this.stopFlag) {
+        const t = e.start + (el.currentTime - e.seg.in) / (e.seg.speed || 1);
+        this.drawFrame(ctx, el, e.seg, W, H);
+        this.overlay(ctx, plan, e, Math.min(t, e.end - 0.001), W, H, o.platform, o.logoImg);
+        o.onTime?.(Math.min(t, total));
+        if (el.currentTime >= e.seg.out - 0.02 || el.ended || el.paused) break;
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      el.pause();
+      if (cont && plan.music && total - e.end < 1.2 && contGain) contGain.gain.value = (plan.music.volume ?? 0.85) * 0.5;
+    }
+    if (cont) { cont.pause(); }
+    for (const g of A.nodes.values()) g.gain.value = 0;
+    if (!recorder) return null;
+    const done = new Promise((r) => (recorder.onstop = r));
+    recorder.stop(); await done;
+    if (this.stopFlag) return null;
+    const type = (mime || "video/webm").split(";")[0];
+    return { blob: new Blob(chunks, { type }), ext: type.includes("mp4") ? "mp4" : "webm", seconds: (performance.now() - t0) / 1000 };
+  }
+  stop() { this.stopFlag = true; for (const s of Object.values(this.sources)) s.els.forEach((e) => e.pause()); }
+}
+
+/* ═════════════ UI: wspólne ═════════════ */
+const STATE = { mode: "analysis", aFile: null, mFiles: [], mMusic: null, report: null, studio: null, abort: null };
+function fillSelect(sel, obj, val) { sel.innerHTML = Object.entries(obj).map(([k, v]) => `<option value="${k}"${k === val ? " selected" : ""}>${esc(typeof v === "string" ? v : v.label)}</option>`).join(""); }
+fillSelect($("#a-goal"), GOALS, "leads"); fillSelect($("#a-platform"), PLATFORMS, "instagram"); fillSelect($("#a-service"), SERVICES, "correction");
+fillSelect($("#m-service"), SERVICES, "ceramic"); fillSelect($("#m-platform"), PLATFORMS, "instagram");
+function show(id) { $$(".view").forEach((v) => (v.hidden = v.id !== id)); window.scrollTo({ top: 0 }); }
+function setMode(m) {
+  STATE.mode = m;
+  $("#nav-analysis").setAttribute("aria-pressed", String(m === "analysis"));
+  $("#nav-montage").setAttribute("aria-pressed", String(m === "montage"));
+  if (STATE.studio?.renderer) STATE.studio.renderer.stop();
+  show(m === "analysis" ? "v-analysis" : "v-montage");
+}
+$("#nav-analysis").onclick = () => setMode("analysis");
+$("#nav-montage").onclick = () => setMode("montage");
+function bindDrop(zone, input, onFiles) {
+  zone.onclick = () => input.click();
+  zone.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } };
+  zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("over"); };
+  zone.ondragleave = () => zone.classList.remove("over");
+  zone.ondrop = (e) => { e.preventDefault(); zone.classList.remove("over"); onFiles(Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("video/") || /\.(mp4|mov|webm|m4v|mkv)$/i.test(f.name))); };
+  input.onchange = () => { onFiles(Array.from(input.files)); input.value = ""; };
+}
+const mb = (b) => `${(b / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+bindDrop($("#a-drop"), $("#a-file"), (fs) => { if (!fs.length) return; STATE.aFile = fs[0]; $("#a-filelist").innerHTML = `<div class="fileitem"><span>${esc(fs[0].name)}</span><span class="subtle">${mb(fs[0].size)}</span></div>`; $("#a-start").disabled = false; $("#a-hint").textContent = "Gotowe do analizy."; });
+function renderMFiles() {
+  $("#m-filelist").innerHTML = STATE.mFiles.map((f, i) => `<div class="fileitem"><span>${i + 1}. ${esc(f.name)}</span><span class="subtle">${mb(f.size)}</span><button class="btn ghost sm" data-rm="${i}" aria-label="Usuń">✕</button></div>`).join("");
+  $$("[data-rm]", $("#m-filelist")).forEach((b) => (b.onclick = () => { STATE.mFiles.splice(Number(b.dataset.rm), 1); renderMFiles(); }));
+  $("#m-start").disabled = STATE.mFiles.length < 2;
+  $("#m-hint").textContent = STATE.mFiles.length < 2 ? "Dodaj co najmniej 2 klipy." : `${STATE.mFiles.length} klipów gotowych.`;
+}
+bindDrop($("#m-drop"), $("#m-file"), (fs) => { STATE.mFiles.push(...fs.slice(0, 30 - STATE.mFiles.length)); renderMFiles(); });
+$("#m-music").onchange = (e) => (STATE.mMusic = e.target.files[0] || null);
+
+/* Postęp */
+let PSTEPS = [];
+function progressStart(title, steps) {
+  PSTEPS = steps.map((s) => ({ label: s, state: "todo" }));
+  $("#p-title").textContent = title; $("#p-bar").style.width = "2%"; $("#p-detail").textContent = "Start…";
+  renderSteps(); show("v-progress");
+}
+function renderSteps() { $("#p-steps").innerHTML = PSTEPS.map((s) => `<div class="step-row ${s.state}"><span class="dot">${s.state === "done" ? "✓" : ""}</span>${esc(s.label)}</div>`).join(""); }
+function stepTo(i, detail) { PSTEPS.forEach((s, k) => { if (k < i && s.state !== "skip") s.state = "done"; else if (k === i) s.state = "active"; }); renderSteps(); if (detail) $("#p-detail").textContent = detail; }
+function stepSkip(i) { PSTEPS[i].state = "skip"; renderSteps(); }
+function prog(f, detail) { $("#p-bar").style.width = `${Math.round(clamp(f, 0, 1) * 100)}%`; if (detail) $("#p-detail").textContent = detail; }
+$("#p-cancel").onclick = () => STATE.abort?.abort();
+
+/* ═════════════ Przebieg: analiza rolki ═════════════ */
+$("#a-start").onclick = async () => {
+  const file = STATE.aFile; if (!file) return;
+  const ctxIn = { goal: $("#a-goal").value, platform: $("#a-platform").value, service: $("#a-service").value, cta: $("#a-cta").value.trim() };
+  await capReady();
+  const wantAi = $("#a-ai").checked && aiUsable();
+  STATE.abort = new AbortController(); const signal = STATE.abort.signal;
+  progressStart("Analiza rolki", ["Odczyt pliku i metadanych", "Próbkowanie klatek: ruch, ostrość, jasność", "Wykrywanie cięć i scen", "Klatki scen i pierwszych sekund", "Analiza audio: głośność, cisza, tempo", "Ocena AI (Claude)", "Raport"]);
+  try {
+    stepTo(0, file.name);
+    const src = await openSource(file);
+    src.fps = await estimateFps(src.els[0]).catch(() => null);
+    if (src.duration > 600) throw new Error("Film jest dłuższy niż 10 minut — wgraj krótszy materiał.");
+    stepTo(1); const fps = clamp(220 / src.duration, 2, 5);
+    const samples = await sampleVideo(src, fps, (f) => prog(0.05 + f * 0.45, `Klatka ${Math.round(f * src.duration * fps)} z ${Math.floor(src.duration * fps)}`), signal);
+    src.samples = samples;
+    stepTo(2); prog(0.52);
+    const scenes = detectScenes(samples, src.duration).map((s) => { const st = statsFor(samples, s.start, s.end); return { ...s, ...st, interest: interestOf(st) }; });
+    stepTo(3, `${scenes.length} scen`);
+    for (const s of scenes) { if (signal.aborted) throw new Cancelled(); s.thumb = await grabFrame(src.els[0], Math.min(s.start + (s.end - s.start) / 2, src.duration - 0.05), 160); }
+    let aiImages = [];
+    if (wantAi) {
+      const max = Math.max(2, Math.min(CAP.images || 8, 16));
+      const hookT = [0.1, 0.8, 1.6, 2.6].filter((t) => t < src.duration - 0.05);
+      let sel = scenes; const budget = Math.max(1, max - hookT.length);
+      if (sel.length > budget) { const st = sel.length / budget; sel = Array.from({ length: budget }, (_, k) => sel[Math.floor(k * st)]); }
+      const times = [...hookT.map((t) => ({ t, scene: (scenes.find((s) => t >= s.start && t < s.end) || scenes[0]).index })), ...sel.map((s) => ({ t: s.start + (s.end - s.start) / 2, scene: s.index })).filter((x) => !hookT.some((h) => Math.abs(h - x.t) < 0.4))].sort((a, b) => a.t - b.t).slice(0, max);
+      for (const x of times) { if (signal.aborted) throw new Cancelled(); aiImages.push({ ...x, blob: await grabFrame(src.els[0], x.t, 512, true) }); }
+    }
+    prog(0.62);
+    stepTo(4); const audio = await analyzeAudio(file).catch(() => null); prog(0.7);
+    const info = { duration: src.duration, width: src.width, height: src.height, fps: src.fps };
+    const ctx = { ...ctxIn, src, info, scenes, samples, audio };
+    let rep = runHeuristics({ scenes, samples, info, audio, platform: ctx.platform, goal: ctx.goal });
+    rep.mode = "pomiar"; rep.warnings = []; rep.techTotal = rep.total;
+    templateExtras(rep, { ...ctx, scenes });
+    if (wantAi) {
+      stepTo(5, "Claude ogląda klatki i pisze raport… (zwykle 30–90 s)");
+      try {
+        const ai = await aiAnalyzeReel({ ...ctx, heur: rep }, aiImages, ({ text }) => prog(0.72 + Math.min(0.25, text.length / 24000), `Claude pisze raport… ${text.length.toLocaleString("pl-PL")} znaków`), signal);
+        rep = mergeAi(rep, ai, ctx);
+        const re = runHeuristics({ scenes, samples, info, audio, platform: ctx.platform, goal: ctx.goal });
+        rep.retention = re.retention;
+      } catch (e) {
+        if (e?.code === "cancelled" || signal.aborted) throw new Cancelled();
+        if (e?.code === "not_granted" || e?.code === "sampling_disabled") { CAP.denied = true; updateAiPill(); }
+        rep.warnings.push(`${AI_ERR[e?.code] || "Ocena AI nie powiodła się."} Pokazano analizę techniczną.`);
+        if (!["not_granted", "sampling_disabled", "refused", "images_unavailable", "prompt_too_large"].includes(e?.code)) rep.aiRetry = true;
+      }
+    } else {
+      stepSkip(5);
+      rep.warnings.push(aiUsable() ? "Ocena AI była wyłączona — pokazano analizę techniczną." : "AI jest niedostępne w tym widoku — pokazano analizę techniczną (pomiary obrazu i dźwięku). Treść obrazu nie była interpretowana.");
+    }
+    stepTo(6); prog(1);
+    rep.ctx = ctx; ctx.aiImages = aiImages;
+    STATE.report = rep;
+    renderReport();
+  } catch (e) {
+    if (e instanceof Cancelled || e?.code === "cancelled") { setMode("analysis"); return; }
+    show("v-analysis");
+    $("#a-hint").innerHTML = `<span style="color:var(--bad)">${esc(e.message || "Nie udało się przeanalizować pliku.")}</span>`;
+  }
+};
+
+/* ═════════════ Raport ═════════════ */
+const SEVC = { GOOD: "var(--good)", WARN: "var(--warn)", BAD: "var(--bad)" };
+const SEVL = { GOOD: "Dobry moment", WARN: "Do poprawy", BAD: "Problem" };
+function gaugeSvg(score) {
+  const r = 63, c = 2 * Math.PI * r, col = score >= 75 ? "#2fd27a" : score >= 55 ? "#f5b638" : "#f04b5c";
+  return `<div class="gauge"><svg width="150" height="150" viewBox="0 0 150 150" style="transform:rotate(-90deg)"><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4d86ff"/><stop offset="1" stop-color="${col}"/></linearGradient></defs><circle cx="75" cy="75" r="${r}" fill="none" stroke="#20252f" stroke-width="10"/><circle cx="75" cy="75" r="${r}" fill="none" stroke="url(#gg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - clamp(score, 0, 100) / 100)}"/></svg><div class="num"><b style="color:${col}">${Math.round(score)}</b><span>/ 100</span><span style="letter-spacing:.18em;font-size:9px;margin-top:4px">AI REEL SCORE</span></div></div>`;
+}
+function renderReport() {
+  const r = STATE.report, c = r.ctx, dur = c.info.duration, ai = r.mode === "AI";
+  const tabs = [["score", "Ocena"], ["findings", `Sekunda po sekundzie (${r.findings.length})`], ["hooks", "Hooki"], ["shots", "Co nagrać?"], ["captions", "Napisy"], ["music", "Muzyka"], ...(r.questions ? [["questions", "13 pytań"]] : []), ["tech", "Dane techniczne"]];
+  const step = dur <= 8 ? 1 : dur <= 20 ? 4 : dur <= 45 ? 5 : dur <= 120 ? 15 : 30;
+  const pct = (t) => `${(clamp(t, 0, dur) / dur) * 100}%`;
+  const lanes = []; [...r.findings].sort((a, b) => a.start - b.start).forEach((f) => { const l = lanes.find((x) => x[x.length - 1].end <= f.start + 0.05); l ? l.push(f) : lanes.push([f]); });
+  $("#v-report").innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:flex-end;margin-bottom:16px">
+      <div><p class="eyebrow">Raport analizy</p><h1>${esc(c.src.name.replace(/\.[^.]+$/, ""))}</h1>
+        <div class="row" style="gap:6px"><span class="badge ai">${esc(GOALS[c.goal])}</span><span class="badge">${esc(PLATFORMS[c.platform].label)}</span><span class="badge">${esc(SERVICES[c.service])}</span><span class="badge ${ai ? "ai" : "warn"}">${ai ? "Ocena AI (Claude)" : "Analiza techniczna (bez AI)"}</span></div></div>
+      <div class="row"><button class="btn" id="r-new">Nowa analiza</button><button class="btn glow" id="r-fix">POPRAW ROLKĘ Z AI</button></div>
+    </div>
+    ${r.warnings.map((w) => `<div class="notice warn" style="margin-bottom:10px">${esc(w)}</div>`).join("")}
+    ${r.aiRetry && aiUsable() ? `<div class="row" style="margin-bottom:12px"><button class="btn primary" id="r-airetry">Ponów ocenę AI</button><span class="subtle" id="r-aimsg"></span></div>` : ""}
+    <div class="report-grid">
+      <div class="sticky">
+        <div class="card" style="padding:12px">
+          <video class="player" id="r-video" src="${c.src.url}" controls playsinline></video>
+          <div style="margin-top:10px">
+            <div class="tl" id="r-tl">${c.scenes.map((s) => `<div class="sc" style="left:${pct(s.start)};width:calc(${pct(s.end)} - ${pct(s.start)})">${s.index + 1}</div>`).join("")}<div class="ph" id="r-ph"></div></div>
+            <div class="lanes">${lanes.map((l) => `<div class="lane">${l.map((f) => `<button class="${f.severity}" data-f="${f.id}" title="${esc(`${tc(f.start)}–${tc(f.end)} · ${f.problem || f.shot}`)}" style="left:${pct(f.start)};width:calc(${pct(f.end)} - ${pct(f.start)})" aria-label="Uwaga ${tc(f.start)}"></button>`).join("")}</div>`).join("")}</div>
+            <div class="ticks">${Array.from({ length: Math.floor(dur / step) + 1 }, (_, i) => i * step).filter((t) => t < dur - step * 0.4).map((t) => `<span style="left:${pct(t)}">${tc(t, false)}</span>`).join("")}</div>
+            <div class="legend"><span><i style="background:var(--good)"></i>dobry moment</span><span><i style="background:var(--warn)"></i>do poprawy</span><span><i style="background:var(--bad)"></i>problematyczny</span></div>
+          </div>
+        </div>
+        <div class="card ret">
+          <div class="row" style="justify-content:space-between"><h3 style="margin:0">AI Reel Retention</h3><button class="btn sm" id="r-weak">Popraw słabe momenty</button></div>
+          <p class="subtle" style="margin:4px 0 8px">Prognozowana atrakcyjność kolejnych fragmentów</p>
+          <div id="r-ret"></div>
+          <div class="seglist">${r.retention.segments.map((s) => `<button data-seek="${s.start}"><i style="background:${{ strong: "var(--good)", good: "var(--accent)", drop: "var(--warn)", weak: "var(--bad)" }[s.level]}"></i><span class="tab-num">${tc(s.start, false)}–${tc(s.end, false)}</span><span>${esc(s.label)}</span></button>`).join("")}</div>
+          <div class="notice warn" style="margin-top:10px;font-size:11px">To heurystyczna prognoza (tempo cięć, ruch, jakość obrazu${r.retention.basis.includes("AI") ? " i oceny AI" : ""}), a nie dane o rzeczywistej retencji widzów z platformy.</div>
+        </div>
+      </div>
+      <div style="min-width:0">
+        <div class="rtabs" role="tablist">${tabs.map(([k, l], i) => `<button role="tab" data-tab="${k}" aria-selected="${i === 0}">${esc(l)}</button>`).join("")}</div>
+        <div id="r-panel"></div>
+      </div>
+    </div>`;
+  const video = $("#r-video");
+  const seekTo = (t) => { video.currentTime = clamp(t, 0, dur - 0.05); };
+  video.ontimeupdate = () => ($("#r-ph").style.left = pct(video.currentTime));
+  $("#r-tl").onclick = (e) => { const b = e.currentTarget.getBoundingClientRect(); seekTo(((e.clientX - b.left) / b.width) * dur); };
+  $$("[data-f]").forEach((b) => (b.onclick = () => { const f = r.findings.find((x) => x.id === b.dataset.f); seekTo(f.start); openTab("findings", f.id); }));
+  $$("[data-seek]").forEach((b) => (b.onclick = () => seekTo(Number(b.dataset.seek))));
+  $("#r-ret").innerHTML = retentionSvg(r.retention, dur);
+  $("#r-ret svg").onclick = (e) => { const b = e.currentTarget.getBoundingClientRect(); seekTo(((e.clientX - b.left) / b.width) * dur); };
+  $("#r-new").onclick = () => setMode("analysis");
+  const retry = $("#r-airetry");
+  if (retry) retry.onclick = async () => {
+    retry.disabled = true; $("#r-aimsg").textContent = "Claude ogląda klatki i pisze raport… (zwykle 30–90 s)";
+    const base = runHeuristics({ scenes: c.scenes, samples: c.samples, info: c.info, audio: c.audio, platform: c.platform, goal: c.goal });
+    base.mode = "pomiar"; base.warnings = []; base.techTotal = base.total; templateExtras(base, c);
+    try {
+      const ai = await aiAnalyzeReel({ ...c, heur: base }, c.aiImages, ({ text }) => ($("#r-aimsg").textContent = `Claude pisze raport… ${text.length.toLocaleString("pl-PL")} znaków`));
+      const merged = mergeAi(base, ai, c);
+      merged.retention = runHeuristics({ scenes: c.scenes, samples: c.samples, info: c.info, audio: c.audio, platform: c.platform, goal: c.goal }).retention;
+      merged.ctx = c; STATE.report = merged; renderReport();
+    } catch (e) {
+      if (e?.code === "not_granted" || e?.code === "sampling_disabled") { CAP.denied = true; updateAiPill(); retry.remove(); }
+      else retry.disabled = false;
+      $("#r-aimsg").textContent = AI_ERR[e?.code] || "Ocena AI nie powiodła się.";
+    }
+  };
+  $("#r-fix").onclick = () => openFix("full");
+  $("#r-weak").onclick = () => openFix("weak");
+  $$("[data-tab]").forEach((b) => (b.onclick = () => openTab(b.dataset.tab)));
+  function openTab(k, focusId) {
+    $$("[data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === k)));
+    $("#r-panel").innerHTML = panelHtml(k);
+    $$("#r-panel [data-seek]").forEach((b) => (b.onclick = () => seekTo(Number(b.dataset.seek))));
+    $$("#r-panel [data-fixgo]").forEach((b) => (b.onclick = () => openFix("full")));
+    $$("#r-panel [data-filter]").forEach((b) => (b.onclick = () => { $$("#r-panel .finding").forEach((el) => (el.hidden = b.dataset.filter !== "ALL" && el.dataset.sev !== b.dataset.filter)); $$("#r-panel [data-filter]").forEach((x) => x.classList.toggle("primary", x === b)); }));
+    if (focusId) { const el = $(`#r-panel [data-fid="${focusId}"]`); if (el) { el.classList.add("sel"); el.scrollIntoView({ behavior: "smooth", block: "center" }); } }
+  }
+  function panelHtml(k) {
+    if (k === "score") return `
+      <div class="card"><div class="gauge-row">${gaugeSvg(r.total)}<div style="flex:1;min-width:220px"><p style="margin:0 0 10px;font-size:15px">${esc(r.summary)}</p>${r.scaled ? `<p class="subtle" style="color:var(--warn)">Wynik techniczny przeliczony na skalę 100 z kategorii, które da się zmierzyć bez AI.</p>` : ""}<div class="notice info"><b>Optymalna długość: ${r.optimal.sec} s</b> (obecnie ${pl(dur)} s). ${esc(r.optimal.note)}</div></div></div></div>
+      <div class="card" style="margin-top:14px"><h3>Punktacja kategorii</h3>${r.categories.map((c) => `<div class="cat"><div class="h"><span>${esc(c.label)}</span><span class="tab-num">${c.score === null ? '<span class="badge">brak danych</span>' : `${pl(c.score)} <span class="subtle">/ ${c.max}</span>`}</span></div><div class="bar"><div style="width:${c.score === null ? 0 : (c.score / c.max) * 100}%;background:${c.score === null ? "var(--surface-3)" : c.score / c.max >= 0.75 ? "var(--good)" : c.score / c.max >= 0.5 ? "var(--warn)" : "var(--bad)"}"></div></div><p>${esc(c.why)}${c.basis === "pomiar" ? " · pomiar techniczny" : ""}</p></div>`).join("")}</div>
+      <div class="two" style="margin-top:14px"><div class="card"><h3 style="color:var(--good)">Mocne strony</h3><ul class="plain">${(r.strengths.length ? r.strengths : ["—"]).map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div><div class="card"><h3 style="color:var(--warn)">Słabe strony</h3><ul class="plain">${(r.weaknesses.length ? r.weaknesses : ["—"]).map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div></div>
+      <div class="card" style="margin-top:14px;border-color:rgba(77,134,255,.35)"><h3>Priorytetowe poprawki</h3><ol class="fixes">${r.fixes.map((f) => `<li><span>${esc(f)}</span></li>`).join("")}</ol><button class="btn glow" style="margin-top:14px" data-fixgo>Zastosuj automatycznie — Popraw rolkę</button></div>`;
+    if (k === "findings") return `<div class="row" style="margin-bottom:10px;gap:6px">${[["ALL", `Wszystkie (${r.findings.length})`], ["BAD", "Problem"], ["WARN", "Do poprawy"], ["GOOD", "Dobry moment"]].map(([v, l], i) => `<button class="btn sm${i === 0 ? " primary" : ""}" data-filter="${v}">${l}</button>`).join("")}</div><div class="grid" style="gap:10px">${r.findings.map((f) => `
+      <div class="finding" data-fid="${f.id}" data-sev="${f.severity}"><span class="ic" style="background:${SEVC[f.severity]}"></span><div>
+        <div class="row" style="gap:6px"><button class="tcbtn" data-seek="${f.start}">${tc(f.start)}–${tc(f.end)} ▶</button><span class="badge ${f.severity === "GOOD" ? "good" : f.severity === "WARN" ? "warn" : "bad"}">${SEVL[f.severity]}</span>${f.severity !== "GOOD" ? `<span class="badge">Priorytet ${f.priority}</span>` : ""}<span class="badge ${f.source === "AI" ? "ai" : ""}">${f.source === "AI" ? "AI" : "pomiar"}</span></div>
+        <dl><div><dt>Ujęcie</dt><dd>${esc(f.shot)}</dd></div>${f.problem ? `<div><dt>Problem</dt><dd>${esc(f.problem)}</dd></div>` : ""}${f.reason ? `<div><dt>Dlaczego to ważne</dt><dd class="muted">${esc(f.reason)}</dd></div>` : ""}<div class="sug"><dt>${f.severity === "GOOD" ? "Rekomendacja" : "Sugestia"}</dt><dd>${esc(f.suggestion)}</dd></div>${f.caption || f.newDuration ? `<div class="subtle">${f.caption ? `Napis: <span style="color:var(--fg)">„${esc(f.caption)}”</span> ` : ""}${f.newDuration ? `· Czas nowego ujęcia: <span style="color:var(--fg)">${pl(f.newDuration)} s</span>` : ""}</div>` : ""}</dl></div></div>`).join("")}</div>`;
+    if (k === "hooks") return `${r.hooks[0]?.src === "szablon" ? `<div class="notice warn" style="margin-bottom:10px">Propozycje z biblioteki szablonów (bez AI) — obecność ujęcia w materiale nie została sprawdzona.</div>` : ""}<div class="cards">${r.hooks.map((h) => `<div class="card"><div class="row" style="justify-content:space-between"><span class="badge ai">${esc(HOOK_TYPES[h.type] || h.type)}</span>${h.needsNewFootage === true ? '<span class="badge warn">Wymaga dogrania</span>' : h.needsNewFootage === false ? '<span class="badge good">Ujęcie jest w materiale</span>' : '<span class="badge">Niezweryfikowane</span>'}</div><p style="font-size:17px;font-weight:600;margin:10px 0 0">„${esc(h.text)}”</p><dl class="kv"><dt>Ujęcie</dt><dd>${esc(h.shot)}${h.sourceStart != null ? ` <button class="tcbtn" data-seek="${h.sourceStart}">${tc(h.sourceStart)}</button>` : ""}</dd><dt>Długość</dt><dd>${pl(h.duration)} s</dd><dt>Animacja</dt><dd>${esc(h.animation)}</dd><dt>Wejście muzyki</dt><dd>${esc(h.musicIn)}</dd></dl><p class="subtle" style="margin:10px 0 0">${esc(h.why)}</p></div>`).join("")}</div>`;
+    if (k === "shots") return `<div class="notice ${r.missing.src === "AI" ? "info" : "warn"}" style="margin-bottom:10px">${r.missing.src === "AI" ? "Ujęcia, których brakuje w materiale dla tej usługi (na podstawie analizy obrazu)." : "Lista kontrolna ujęć dla wybranej usługi (bez AI nie da się sprawdzić, które już masz)."} Nie proponujemy ujęć sugerujących efekt, którego nie osiągnięto.</div><div class="grid" style="gap:10px">${r.missing.items.map((m) => `<div class="card"><h3 style="margin:0 0 4px">${esc(m.name)}</h3><p class="muted" style="margin:0">${esc(m.what)}</p><dl class="kv"><dt>Kamera</dt><dd>${esc(m.angle)}</dd><dt>Ruch</dt><dd>${esc(m.movement)}</dd><dt>Nagranie</dt><dd>${esc(m.sourceLength)}</dd><dt>W montażu</dt><dd>${esc(m.editLength)}</dd><dt>Światło</dt><dd>${esc(m.lighting)}</dd><dt>Wykorzystanie</dt><dd>${esc(m.placement)}</dd></dl><p class="subtle" style="margin:8px 0 0;color:#a9c4ff">Cel: ${esc(m.why)}</p></div>`).join("")}</div>`;
+    if (k === "captions") return `<div class="card"><h3>Napisy marketingowe</h3><p class="subtle">${r.captions.src === "AI" ? "Propozycje AI dopasowane do treści i celu." : "Szablony dla wybranej usługi (bez AI)."} Zastosujesz je w „Popraw rolkę”.</p><div class="grid" style="gap:6px">${r.captions.items.map((c) => `<div class="fileitem"><button class="tcbtn" data-seek="${c.start}">${tc(c.start)}</button><span>„${esc(c.text)}”</span><span class="badge">${esc(c.kind)}</span></div>`).join("")}</div></div>${r.onScreen?.length ? `<div class="card" style="margin-top:14px"><h3>Napisy wykryte w filmie</h3>${r.onScreen.map((o) => `<p style="margin:4px 0"><span class="subtle tab-num">${tc(o.start)}</span> „${esc(o.text)}”</p>`).join("")}</div>` : ""}<p class="subtle" style="margin-top:12px">Transkrypcja mowy działa w pełnej wersji aplikacji (serwer z Whisper).</p>`;
+    if (k === "music") { const m = r.music; return `<div class="card"><div class="row" style="gap:6px"><span class="badge ai">${esc(m.mood)}</span>${m.tempo ? `<span class="badge">${esc(m.tempo)}</span>` : ""}<span class="badge">${esc(m.bpm)}</span>${m.src !== "AI" ? '<span class="badge warn">biblioteka stylów</span>' : ""}</div><p style="font-size:15px;margin:12px 0">${esc(m.rec)}</p><div class="two"><div class="notice"><b style="color:var(--fg)">Rozpoczęcie</b><br>${esc(m.start)}</div><div class="notice"><b style="color:var(--fg)">Synchronizacja cięć</b><br>${esc(m.cutSync)}</div></div>${m.accents?.length ? `<h3 style="margin-top:14px">Momenty podbicia dynamiki</h3><ul class="plain">${m.accents.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}${m.measured ? `<div class="notice" style="margin-top:12px">Pomiar audio w filmie: tempo ${m.measured.bpm ? `${pl(m.measured.bpm)} BPM` : "brak wyraźnego rytmu"}, głośność ${m.measured.lufs != null ? `ok. ${pl(m.measured.lufs)} LUFS` : "—"}.</div>` : ""}<p class="subtle" style="margin-top:12px">Nie pobieramy utworów z TikToka, Instagrama ani Spotify. W auto montażu możesz dodać własny, legalnie licencjonowany utwór.</p></div>`; }
+    if (k === "questions") return `<div class="grid" style="gap:8px">${r.questions.map((q, i) => `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><b>${i + 1}. ${esc(q.q)}</b><span class="badge ${{ yes: "good", partly: "warn", no: "bad" }[q.verdict] || ""}">${{ yes: "Tak", partly: "Częściowo", no: "Nie" }[q.verdict] || "Brak danych"}</span></div><p class="muted" style="margin:8px 0 0">${esc(q.answer)}</p></div>`).join("")}</div>`;
+    if (k === "tech") { const m = r.metrics, a = c.audio; return `<div class="card"><h3>Metadane i pomiary</h3><div class="tech">${[["Długość", `${pl(dur)} s`], ["Rozdzielczość", `${c.info.width}×${c.info.height}`], ["Klatki/s (szac.)", c.info.fps ? pl(c.info.fps, 2) : "—"], ["Sceny / cięcia", `${c.scenes.length} / ${m.cuts}`], ["Średnie ujęcie", `${pl(m.avgShot, 2)} s`], ["Najdłuższe ujęcie", `${pl(m.longest.length, 2)} s`], ["Pierwsze cięcie", m.firstCutAt != null ? `${pl(m.firstCutAt, 2)} s` : "brak"], ["Głośność (ok.)", a?.lufs != null ? `${pl(a.lufs)} LUFS` : a ? "—" : "brak audio"], ["Szczyt", a?.peakDb != null ? `${pl(a.peakDb)} dBFS` : "—"], ["Tempo audio", a?.tempo?.bpm ? `${pl(a.tempo.bpm)} BPM` : "—"], ["Tryb", ai ? "AI (Claude) + pomiar" : "pomiar techniczny"]].map(([kk, v]) => `<div><span class="muted">${kk}</span><span>${esc(v)}</span></div>`).join("")}</div></div><div class="card" style="margin-top:14px"><h3>Wykryte sceny</h3><div class="scenes">${c.scenes.map((s) => `<div class="scene"><img src="${s.thumb}" alt=""><button class="tcbtn" data-seek="${s.start}">${tc(s.start)}–${tc(s.end)}</button><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(s.ai?.description || `Scena ${s.index + 1}`)}</span><span class="badge">${s.ai?.category ? esc(SHOTS[s.ai.category]) : `${pl(s.interest)}/10`}</span></div>`).join("")}</div></div><p class="subtle" style="margin-top:10px">Pomiary w przeglądarce: próbkowanie klatek (ruch, ostrość — wariancja Laplasjanu, jasność, kontrast), cięcia z różnic histogramów, głośność z filtrem K (przybliżenie BS.1770), tempo metodą spectral flux + autokorelacja.</p>`; }
+    return "";
+  }
+  openTab("score");
+  show("v-report");
+}
+function retentionSvg(ret, dur) {
+  const W = 600, H = 140, x = (t) => (t / dur) * W, y = (v) => H - 8 - (v / 100) * (H - 16);
+  const pts = ret.points, line = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+  const fill = { strong: "rgba(47,210,122,0.12)", good: "rgba(77,134,255,0.08)", drop: "rgba(245,182,56,0.12)", weak: "rgba(240,75,92,0.14)" };
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Prognoza atrakcyjności">${ret.segments.map((s) => `<rect x="${x(s.start)}" y="0" width="${Math.max(1, x(s.end) - x(s.start))}" height="${H}" fill="${fill[s.level]}"/>`).join("")}${[25, 50, 75].map((g) => `<line x1="0" x2="${W}" y1="${y(g)}" y2="${y(g)}" stroke="#242a35" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>`).join("")}<path d="${line} L${x(pts[pts.length - 1]?.t || 0)},${H} L0,${H} Z" fill="rgba(77,134,255,0.18)"/><path d="${line}" fill="none" stroke="#5a8fff" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+/* ═════════════ Popraw rolkę ═════════════ */
+function openFix(mode) {
+  const r = STATE.report, dur = r.ctx.info.duration;
+  const target = Math.max(5, Math.min(r.optimal.sec, Math.floor(dur)));
+  const plan = fixPlan(r, { mode, target, captions: true, preset: "clean_modern" });
+  const sources = { [r.ctx.src.id]: { ...r.ctx.src, samples: r.ctx.samples } };
+  const before = { total: r.techTotal ?? r.total, ai: r.mode === "AI" ? r.total : null, cuts: r.metrics.cuts, avg: r.metrics.avgShot, dur, hook: r.ctx.scenes[0].ai?.description || "ujęcie 1" };
+  openStudio({ kind: "fix", title: mode === "full" ? "Wersja poprawiona" : "Poprawione słabe momenty", plans: [{ key: "fix", label: "Poprawiona wersja", plan }], sources, platform: r.ctx.platform, goal: r.ctx.goal, service: r.ctx.service, audio: r.ctx.audio, before, beforeScaled: r.scaled, origUrl: r.ctx.src.url, target, thumbs: r.ctx.scenes });
+}
+
+/* ═════════════ Auto montaż ═════════════ */
+$("#m-start").onclick = async () => {
+  const files = [...STATE.mFiles]; if (files.length < 2) return;
+  const opt = { service: $("#m-service").value, platform: $("#m-platform").value, target: Number($("#m-duration").value), cta: $("#m-cta").value.trim() };
+  await capReady();
+  const wantAi = $("#m-ai").checked && aiUsable();
+  STATE.abort = new AbortController(); const signal = STATE.abort.signal;
+  progressStart("AI Auto Montaż", ["Odczyt klipów", "Analiza klipów: sceny, ruch, ostrość", "Analiza muzyki (tempo, beaty)", "Rozpoznanie ujęć i napisy (AI)", "Budowanie trzech wersji montażu"]);
+  try {
+    stepTo(0);
+    const sources = {}, cands = [];
+    for (const f of files) { if (signal.aborted) throw new Cancelled(); const s = await openSource(f); sources[s.id] = s; }
+    stepTo(1);
+    const list = Object.values(sources);
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i], fps = clamp(90 / s.duration, 2, 4);
+      s.samples = await sampleVideo(s, fps, (f) => prog((i + f) / list.length * 0.6, `Klip ${i + 1} z ${list.length}: ${s.name}`), signal);
+      s.scenes = detectScenes(s.samples, s.duration).map((sc) => { const st = statsFor(s.samples, sc.start, sc.end); return { ...sc, ...st, interest: interestOf(st) }; });
+      for (const sc of s.scenes) sc.thumb = await grabFrame(s.els[0], Math.min(sc.start + (sc.end - sc.start) / 2, s.duration - 0.05), 160);
+    }
+    stepTo(2);
+    let musicEl = null, musicInfo = null;
+    if (STATE.mMusic) { musicInfo = await analyzeAudio(STATE.mMusic).catch(() => null); musicEl = document.createElement("audio"); musicEl.src = URL.createObjectURL(STATE.mMusic); musicEl.preload = "auto"; }
+    else stepSkip(2);
+    prog(0.68);
+    let bank = null, warn = null;
+    if (wantAi) {
+      stepTo(3, "Claude rozpoznaje ujęcia…");
+      try {
+        const max = Math.max(2, Math.min(CAP.images || 8, 16)), imgs = [];
+        const all = list.flatMap((s, ci) => s.scenes.map((sc) => ({ s, ci, sc })));
+        let sel = all; if (sel.length > max) { const st = sel.length / max; sel = Array.from({ length: max }, (_, k) => all[Math.floor(k * st)]); }
+        for (const x of sel) imgs.push({ ...x, blob: await grabFrame(x.s.els[0], x.sc.start + (x.sc.end - x.sc.start) / 2, 512, true) });
+        const prompt = `Przygotowujesz automatyczny montaż rolki reklamowej studia detailingowego (usługa: ${SERVICES[opt.service]}) z kilku surowych nagrań. ${AI_RULES}
+Obrazy w kolejności: ${imgs.map((x, i) => `obraz ${i + 1} = klip ${x.ci + 1} („${x.s.name}”), scena ${x.sc.index} (${tc(x.sc.start)}–${tc(x.sc.end)})`).join("; ")}.
+Odpowiedz WYŁĄCZNIE JSON: {"scenes":[{"clip":1,"index":0,"description":"co widać, krótko","category":"result|before|polishing|coating|ppf|washing|decon|interior|upholstery|detail|wheels|water|worker|reveal|studio|other","interest":0,"quality":0,"hook":0}],"captions":{"hook":["max 6 słów"],"process":[""],"result":[""],"benefit":[""],"cta":[""]}}
+Jeden wpis na każdy obraz. interest/quality/hook 0–10. Napisy tylko zgodne z tym, co widać${opt.cta ? `; CTA studia: „${opt.cta}”` : ""}.`;
+        const ai = await CAP.sample.json(prompt, { images: imgs.map((x) => x.blob), modelTier: "default", signal, cache: false, onText: ({ text }) => prog(0.7 + Math.min(0.2, text.length / 8000), `Claude rozpoznaje ujęcia… ${text.length} znaków`) });
+        for (const e of Array.isArray(ai?.scenes) ? ai.scenes : []) { const s = list[Number(e.clip) - 1]; const sc = s?.scenes.find((x) => x.index === Number(e.index)); if (sc) sc.ai = { description: str(e.description), category: SHOTS[e.category] ? e.category : "other", interest: num(e.interest, 0, 10, 5), quality: num(e.quality, 0, 10, 5), hook: num(e.hook, 0, 10, 3) }; }
+        if (ai?.captions) bank = Object.fromEntries(["hook", "process", "result", "benefit", "cta"].map((k) => [k, (ai.captions[k] || []).map((x) => str(x).slice(0, 60)).filter(Boolean)]));
+      } catch (e) {
+        if (e?.code === "cancelled" || signal.aborted) throw new Cancelled();
+        if (e?.code === "not_granted" || e?.code === "sampling_disabled") { CAP.denied = true; updateAiPill(); }
+        warn = `${AI_ERR[e?.code] || "AI nie rozpoznało ujęć."} Montaż oparty na pomiarach i kolejności plików.`;
+      }
+    } else { stepSkip(3); warn = "Tryb bez AI: ujęcia wybierane wg pomiarów (ostrość, ruch, jasność) i kolejności plików; napisy z szablonów."; }
+    stepTo(4); prog(0.95);
+    list.forEach((s, ci) => s.scenes.forEach((sc) => cands.push({ src: s.id, name: s.name, order: ci, start: sc.start, end: sc.end, category: sc.ai?.category || null, interest: sc.ai?.interest ?? sc.interest, quality: sc.ai?.quality ?? round(sc.sharpness * 7 + (sc.brightness > 0.15 ? 3 : 0), 2), hook: sc.ai?.hook ?? round(sc.interest * 0.8, 2), motion: sc.motion, sharpness: sc.sharpness, brightness: sc.brightness, description: sc.ai?.description || null, thumb: sc.thumb })));
+    const samplesBy = Object.fromEntries(list.map((s) => [s.id, s.samples])), durBySrc = Object.fromEntries(list.map((s) => [s.id, s.duration]));
+    const mo = { ...opt, captions: bank, music: Boolean(musicEl), musicBeats: musicInfo?.tempo?.beats || [], musicBpm: musicInfo?.tempo?.bpm || null, durBySrc };
+    const plans = ["viral", "premium", "sales"].map((st) => ({ key: st, label: STRUCT[st].label, sum: STRUCT[st].sum, use: STRUCT[st].use, plan: montagePlan(cands, samplesBy, st, mo) }));
+    prog(1);
+    openStudio({ kind: "montage", title: "AI Auto Montaż", plans, sources, platform: opt.platform, goal: "leads", service: opt.service, audio: null, musicEl, musicInfo, warn, target: opt.target, thumbs: cands });
+  } catch (e) {
+    if (e instanceof Cancelled || e?.code === "cancelled") { setMode("montage"); return; }
+    show("v-montage");
+    $("#m-hint").innerHTML = `<span style="color:var(--bad)">${esc(e.message || "Nie udało się przetworzyć klipów.")}</span>`;
+  }
+};
+
+/* ═════════════ Studio: podgląd, edycja, eksport ═════════════ */
+function openStudio(o) {
+  if (STATE.studio?.renderer) STATE.studio.renderer.stop();
+  const st = { ...o, cur: 0, renderer: new Renderer(o.sources), time: 0, playing: false, logoImg: null, exported: null };
+  for (const p of o.plans) if (p.plan.keepAudio) { const s = o.sources[p.plan.keepAudio.src]; s.contEl ||= makeVideo(s.url); }
+  STATE.studio = st;
+  const plan = () => st.plans[st.cur].plan;
+  const thumbFor = (seg) => { const c = st.thumbs.filter((x) => (x.src ?? st.plans[0].plan.segs[0].src) === seg.src || x.thumb).find((x) => seg.in >= x.start - 0.01 && seg.in < x.end && (x.src ? x.src === seg.src : true)); return c?.thumb || ""; };
+  $("#v-studio").innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:flex-end;margin-bottom:14px">
+      <div><p class="eyebrow">Studio montażu</p><h1>${esc(o.title)}</h1><p class="subtle" style="margin:0">Podgląd na żywo · edycja ujęć i napisów · eksport do pliku wideo</p></div>
+      <button class="btn" id="s-back">${o.kind === "fix" ? "← Wróć do raportu" : "← Nowy montaż"}</button>
+    </div>
+    ${o.warn ? `<div class="notice warn" style="margin-bottom:12px">${esc(o.warn)}</div>` : ""}
+    ${st.plans.length > 1 ? `<div class="variant-tabs">${st.plans.map((p, i) => `<button data-var="${i}" aria-pressed="${i === 0}">${esc(p.label)}<small>${esc(p.sum)}</small></button>`).join("")}</div>` : ""}
+    <div class="studio">
+      <div style="min-width:0">
+        <div class="stage">
+          ${o.origUrl ? `<div class="screen"><span class="subtle">Oryginał <span class="score-chip" id="s-before"></span></span><video src="${o.origUrl}" controls playsinline></video></div>` : ""}
+          <div class="screen"><span class="subtle">${o.kind === "fix" ? "Poprawiona wersja" : "Montaż"} <span class="score-chip" id="s-after"></span></span><canvas id="s-canvas" width="540" height="960" aria-label="Podgląd montażu"></canvas>
+            <div class="controls"><button class="btn sm primary" id="s-play" aria-label="Odtwórz">▶</button><input type="range" id="s-pos" min="0" max="1" step="0.01" value="0" aria-label="Pozycja"><span class="subtle tab-num" id="s-time">00:00.0</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px"><h3>Porównanie i decyzje montażowe</h3><div id="s-cmp" style="overflow-x:auto"></div><ul class="plain" id="s-changes" style="margin-top:12px"></ul><p class="subtle" style="margin-top:10px">„Prognoza techniczna” liczona jest tą samą metodą dla obu wersji (cięcia, tempo, ruch, jakość obrazu) — bez oceny treści, napisów i CTA. To prognoza, a nie gwarantowany wzrost statystyk.</p><div id="s-aibox" style="margin-top:12px"></div></div>
+      </div>
+      <div class="grid" style="gap:12px">
+        <div class="card" style="border-color:rgba(77,134,255,.35)"><h3>Eksport</h3>
+          <div class="fields"><label class="f">Rozdzielczość<select id="s-res"><option value="1080">1080×1920 (Full HD)</option><option value="720">720×1280 (szybciej)</option></select></label></div>
+          <button class="btn glow" id="s-export" style="margin-top:12px;width:100%">Eksportuj wideo</button>
+          <div class="bar" style="margin-top:10px" hidden id="s-ebar-w"><div id="s-ebar"></div></div>
+          <p class="subtle" id="s-estatus" style="margin:8px 0 0">Eksport trwa tyle, ile film (nagrywanie w czasie rzeczywistym). Nie przełączaj karty w tym czasie.</p>
+          <div class="export-res" id="s-eres"></div>
+        </div>
+        <details class="panel" open><summary>Ujęcia</summary><div><div class="segs" id="s-segs"></div><p class="subtle">Zmieniaj kolejność strzałkami, przycinaj początek i koniec (sekundy materiału źródłowego), usuwaj zbędne ujęcia.</p></div></details>
+        <details class="panel" open><summary>Napisy</summary><div><div class="caps" id="s-caps"></div><div class="row"><button class="btn sm" id="s-addcap">+ Napis</button><label class="f" style="flex:1">Styl napisów<select id="s-preset">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("")}</select></label></div></div></details>
+        <details class="panel"><summary>Ustawienia</summary><div>
+          <label class="f">Docelowa długość: <span id="s-tlab"></span><input type="range" id="s-target" min="5" max="60" step="1"></label>
+          <label class="check"><input type="checkbox" id="s-mute"> Wycisz oryginalne audio klipów</label>
+          <label class="f">Logo na planszy końcowej (PNG)<input type="file" id="s-logo" accept="image/png,image/jpeg,image/webp"></label>
+        </div></details>
+      </div>
+    </div>`;
+  const canvas = $("#s-canvas");
+  if (document.fonts?.load) Promise.all(Object.values(PRESETS).map((p) => document.fonts.load(`${p.weight} 48px "${p.font}"`).catch(() => null))).then(() => redraw());
+  const redraw = () => st.renderer.drawAt(plan(), st.time, canvas, st.platform, st.logoImg).catch(() => {});
+  const refresh = () => {
+    const p = plan(), tot = planTotal(p);
+    if (st.time > tot) st.time = 0;
+    $("#s-pos").max = String(tot); $("#s-pos").value = String(st.time); $("#s-time").textContent = `${tc(st.time)} / ${tc(tot)}`;
+    const sc = scorePlan(p, st.sources, st);
+    $("#s-after").textContent = `${sc.total}/100`; $("#s-after").style.color = sc.total >= 75 ? "var(--good)" : sc.total >= 55 ? "var(--warn)" : "var(--bad)";
+    if (o.before && $("#s-before")) { $("#s-before").textContent = `${o.before.total}/100`; }
+    const rows = [["Długość", (x) => `${pl(x.dur)} s`], ["Liczba ujęć", (x) => String(x.cuts + 1)], ["Średnie ujęcie", (x) => `${pl(x.avg)} s`], ["Tempo cięć", (x) => `${pl(x.cuts / Math.max(1, x.dur), 2)} / s`], ["Prognoza techniczna", (x) => `${x.total}/100`]];
+    const aiNow = p.aiScore && p.aiScore.sig === planSig(p) ? p.aiScore : null;
+    const aiRow = o.before?.ai != null || aiNow ? `<tr><td class="muted">Ocena AI (prognoza)</td><td>${o.before?.ai != null ? `${o.before.ai}/100` : "—"}</td><td style="color:var(--fg);font-weight:600">${aiNow ? `${aiNow.total}/100` : "—"}</td></tr>` : "";
+    if (o.before) $("#s-cmp").innerHTML = `<table class="cmp"><thead><tr><th>Cecha</th><th>Przed</th><th>Po</th></tr></thead><tbody>${rows.map(([l, f]) => `<tr><td class="muted">${l}</td><td>${f(o.before)}</td><td style="color:var(--fg);font-weight:600">${f(sc)}</td></tr>`).join("")}${aiRow}<tr><td class="muted">Hook</td><td>${esc(o.before.hook)}</td><td style="color:var(--fg);font-weight:600">${esc(p.segs[0]?.label || "—")}</td></tr></tbody></table>`;
+    else $("#s-cmp").innerHTML = `<table class="cmp"><thead><tr><th>Cecha</th>${st.plans.map((x) => `<th>${esc(x.key.toUpperCase())}</th>`).join("")}</tr></thead><tbody>${[["Długość", (pp) => `${pl(planTotal(pp))} s`], ["Liczba ujęć", (pp) => String(pp.segs.length)], ["Średnie ujęcie", (pp) => `${pl(planTotal(pp) / Math.max(1, pp.segs.length))} s`], ["Napisy", (pp) => String(pp.caps.length)], ["Prognoza", (pp) => `${scorePlan(pp, st.sources, st).total}/100`]].map(([l, f]) => `<tr><td class="muted">${l}</td>${st.plans.map((x) => `<td>${f(x.plan)}</td>`).join("")}</tr>`).join("")}<tr><td class="muted">Najlepsze do</td>${st.plans.map((x) => `<td>${esc(x.use)}</td>`).join("")}</tr></tbody></table>`;
+    $("#s-changes").innerHTML = (p.changes || []).map((c) => `<li>${esc(c)}</li>`).join("");
+    renderAiBox(aiNow);
+    $("#s-segs").innerHTML = p.segs.map((g, i) => `<div class="seg"><img src="${thumbFor(g)}" alt=""><div style="min-width:0"><div class="lbl">${i + 1}. ${esc(g.label || "ujęcie")} <span class="subtle">· ${pl(segLen(g))} s</span></div><div class="io">od <input type="number" step="0.1" min="0" data-in="${i}" value="${round(g.in, 2)}"> do <input type="number" step="0.1" min="0" data-out="${i}" value="${round(g.out, 2)}"></div></div><div class="acts"><button class="btn ghost sm" data-up="${i}" aria-label="W górę" ${i === 0 ? "disabled" : ""}>↑</button><button class="btn ghost sm" data-dn="${i}" aria-label="W dół" ${i === p.segs.length - 1 ? "disabled" : ""}>↓</button><button class="btn ghost sm" data-del="${i}" aria-label="Usuń" ${p.segs.length < 2 ? "disabled" : ""}>✕</button></div></div>`).join("");
+    const ct = capTimes(p);
+    $("#s-caps").innerHTML = ct.map((c) => `<div class="capr"><input type="text" value="${esc(c.text)}" data-ctext="${c.id}" maxlength="80" aria-label="Tekst napisu"><input type="number" step="0.1" min="0" value="${round(c.start, 1)}" data-cstart="${c.id}" aria-label="Start"><input type="number" step="0.1" min="0.4" value="${round(c.end - c.start, 1)}" data-cdur="${c.id}" aria-label="Czas"><button class="btn ghost sm" data-cdel="${c.id}" aria-label="Usuń napis">✕</button></div>`).join("") || `<p class="subtle">Brak napisów.</p>`;
+    $("#s-preset").value = p.preset; $("#s-mute").checked = p.muteOriginal;
+    $("#s-target").value = String(Math.round(Math.min(60, Math.max(5, tot)))); $("#s-tlab").textContent = `${pl(tot)} s`;
+    bindEditors(); redraw();
+  };
+  const durOf = (g) => st.sources[g.src].duration;
+  const bindEditors = () => {
+    const p = plan();
+    $$("[data-in]").forEach((el) => (el.onchange = () => { const g = p.segs[+el.dataset.in]; g.in = round(clamp(Number(el.value), 0, g.out - 0.3), 3); refresh(); }));
+    $$("[data-out]").forEach((el) => (el.onchange = () => { const g = p.segs[+el.dataset.out]; g.out = round(clamp(Number(el.value), g.in + 0.3, durOf(g)), 3); refresh(); }));
+    $$("[data-up]").forEach((el) => (el.onclick = () => { const i = +el.dataset.up; [p.segs[i - 1], p.segs[i]] = [p.segs[i], p.segs[i - 1]]; refresh(); }));
+    $$("[data-dn]").forEach((el) => (el.onclick = () => { const i = +el.dataset.dn; [p.segs[i + 1], p.segs[i]] = [p.segs[i], p.segs[i + 1]]; refresh(); }));
+    $$("[data-del]").forEach((el) => (el.onclick = () => {
+      const i = +el.dataset.del, g = p.segs.splice(i, 1)[0], nb = p.segs[Math.min(i, p.segs.length - 1)];
+      p.caps = p.caps.filter((c) => c.segId !== g.id || (nb && !p.caps.some((x) => x.segId === nb.id) && (c.segId = nb.id)));
+      refresh();
+    }));
+    const capById = (id) => p.caps.find((c) => c.id === id);
+    $$("[data-ctext]").forEach((el) => (el.onchange = () => { const c = capById(el.dataset.ctext); if (el.value.trim()) c.text = el.value.trim(); refresh(); }));
+    $$("[data-cstart]").forEach((el) => (el.onchange = () => { const c = capById(el.dataset.cstart); c.segId = null; c.start = Math.max(0, Number(el.value)); refresh(); }));
+    $$("[data-cdur]").forEach((el) => (el.onchange = () => { const c = capById(el.dataset.cdur); c.dur = clamp(Number(el.value), 0.4, 10); refresh(); }));
+    $$("[data-cdel]").forEach((el) => (el.onclick = () => { p.caps = p.caps.filter((c) => c.id !== el.dataset.cdel); refresh(); }));
+  };
+  $("#s-addcap").onclick = () => { const p = plan(); p.caps.push({ id: uid("c"), text: "Nowy napis", kind: "caption", segId: null, start: round(st.time, 2), dur: 1.8, preset: p.preset }); refresh(); };
+  $("#s-preset").onchange = (e) => { const p = plan(); p.preset = e.target.value; p.caps.forEach((c) => (c.preset = p.preset)); refresh(); };
+  $("#s-mute").onchange = (e) => { plan().muteOriginal = e.target.checked; };
+  $("#s-target").onchange = (e) => { const p = plan(), want = Number(e.target.value); if (want < planTotal(p)) shrinkTo(p, want); else { for (const g of p.segs) { const room = durOf(g) - g.out; const add = Math.min(room, (want - planTotal(p)) / Math.max(1, p.segs.length)); if (add > 0.05) g.out = round(g.out + add, 3); } } refresh(); };
+  $("#s-logo").onchange = (e) => { const f = e.target.files[0]; if (!f) { st.logoImg = null; return redraw(); } const img = new Image(); img.onload = () => { st.logoImg = img; st.time = Math.max(0, planTotal(plan()) - 1); refresh(); }; img.src = URL.createObjectURL(f); };
+  $("#s-pos").oninput = (e) => { st.time = Number(e.target.value); $("#s-time").textContent = `${tc(st.time)} / ${tc(planTotal(plan()))}`; redraw(); };
+  $("#s-play").onclick = async () => {
+    if (st.playing) { st.renderer.stop(); return; }
+    st.playing = true; $("#s-play").textContent = "❚❚";
+    try { await st.renderer.play(plan(), canvas, { record: false, platform: st.platform, logoImg: st.logoImg, musicEl: st.musicEl, onTime: (t) => { st.time = t; $("#s-pos").value = String(t); $("#s-time").textContent = `${tc(t)} / ${tc(planTotal(plan()))}`; } }); }
+    finally { st.playing = false; $("#s-play").textContent = "▶"; }
+  };
+  $$("[data-var]").forEach((b) => (b.onclick = () => { st.renderer.stop(); st.cur = Number(b.dataset.var); st.time = 0; $$("[data-var]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); refresh(); }));
+  $("#s-back").onclick = () => { st.renderer.stop(); if (o.kind === "fix") show("v-report"); else setMode("montage"); };
+  $("#s-export").onclick = async () => {
+    const btn = $("#s-export");
+    if (st.exporting) { st.renderer.stop(); return; }
+    st.renderer.stop(); await sleep(60);
+    st.exporting = true; btn.textContent = "Zatrzymaj eksport"; $("#s-ebar-w").hidden = false; $("#s-eres").innerHTML = "";
+    const res = Number($("#s-res").value), ec = document.createElement("canvas");
+    ec.width = res; ec.height = Math.round((res * 16) / 9);
+    const tot = planTotal(plan());
+    try {
+      $("#s-estatus").textContent = "Nagrywanie… zostaw kartę otwartą na wierzchu.";
+      const out = await st.renderer.play(plan(), ec, { record: true, bitrate: res >= 1080 ? 10_000_000 : 6_000_000, platform: st.platform, logoImg: st.logoImg, musicEl: st.musicEl, onTime: (t) => { $("#s-ebar").style.width = `${(t / tot) * 100}%`; } });
+      if (!out) { $("#s-estatus").textContent = "Eksport zatrzymany."; return; }
+      $("#s-ebar").style.width = "100%";
+      const name = `rolka-${st.plans[st.cur].key}-${res}x${ec.height}.${out.ext}`;
+      st.exported = { ...out, name };
+      const url = URL.createObjectURL(out.blob);
+      $("#s-eres").innerHTML = `<p class="subtle" style="margin:10px 0 6px">Gotowe: ${esc(name)} · ${mb(out.blob.size)}${out.ext === "webm" ? " · format WebM (ta przeglądarka nie nagrywa MP4)" : ""}</p><video src="${url}" controls playsinline></video><div class="row" style="margin-top:8px"><button class="btn primary" id="s-save">Zapisz plik</button></div><p class="subtle" id="s-savemsg"></p>`;
+      $("#s-save").onclick = saveExport;
+      $("#s-estatus").textContent = "Film gotowy.";
+      await saveExport();
+    } catch (e) {
+      $("#s-estatus").innerHTML = `<span style="color:var(--bad)">${esc(e.message || "Eksport nie powiódł się.")}</span>`;
+    } finally { st.exporting = false; btn.textContent = "Eksportuj wideo"; }
+  };
+  async function saveExport() {
+    const x = st.exported; if (!x) return;
+    const msg = $("#s-savemsg");
+    if (!CAP.downloads) {
+      if (!window.claude) { const a = document.createElement("a"); a.href = URL.createObjectURL(x.blob); a.download = x.name; document.body.append(a); a.click(); a.remove(); if (msg) msg.textContent = "Plik zapisany w folderze Pobrane."; return; }
+      if (msg) msg.textContent = "Zapis plików nie jest dostępny w tym widoku — obejrzyj film powyżej lub otwórz stronę w claude.ai.";
+      return;
+    }
+    try { await CAP.downloads.save({ filename: x.name, data: x.blob }); if (msg) msg.textContent = "Zapisano plik."; }
+    catch (e) { if (msg) msg.textContent = e?.code === "declined" ? "Anulowano zapis. Kliknij „Zapisz plik”, aby spróbować ponownie." : e?.code === "rate_limited" ? "Okno zapisu jest już otwarte — dokończ je." : "Nie udało się zapisać pliku w tym widoku."; }
+  }
+  function renderAiBox(aiNow) {
+    const box = $("#s-aibox");
+    if (!aiUsable()) { box.innerHTML = ""; return; }
+    box.innerHTML = `<div class="row"><button class="btn primary" id="s-aiscore">${aiNow ? "Oceń ponownie z AI" : "Oceń tę wersję z AI"}</button><span class="subtle" id="s-aimsg">Claude obejrzy kadry gotowej wersji (z napisami) i oceni ją w tej samej skali co oryginał.</span></div>${aiNow ? `<div class="card" style="margin-top:10px;background:var(--surface-2)"><div class="row" style="justify-content:space-between"><b>Ocena AI tej wersji: ${aiNow.total}/100</b><span class="badge ai">prognoza ekspercka</span></div><p class="muted" style="margin:8px 0">${esc(aiNow.summary)}</p>${aiNow.cats.map((c) => `<div class="row" style="justify-content:space-between;font-size:12px;padding:3px 0;border-top:1px solid var(--line)"><span class="muted">${esc(c.label)}</span><span class="tab-num">${pl(c.score)} / ${c.max}</span></div>`).join("")}${aiNow.next.length ? `<p class="subtle" style="margin:10px 0 4px">Co jeszcze poprawić:</p><ul class="plain">${aiNow.next.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>` : ""}`;
+    $("#s-aiscore").onclick = async () => {
+      const b = $("#s-aiscore"), m = $("#s-aimsg"), p = plan(), sig = planSig(p);
+      b.disabled = true; m.textContent = "Przygotowuję kadry…"; st.renderer.stop();
+      try {
+        const L = layout(p), total = planTotal(p), max = Math.max(2, Math.min(CAP.images || 8, 12));
+        let times = [0.15, 0.9, 1.7, ...L.map((e) => (e.start + e.end) / 2), total - 0.4].filter((t) => t >= 0 && t < total).sort((a, b) => a - b).filter((t, i, a) => i === 0 || t - a[i - 1] > 0.3);
+        if (times.length > max) { const k = times.length / max; times = Array.from({ length: max }, (_, i) => times[Math.floor(i * k)]); }
+        const c = document.createElement("canvas"); c.width = 432; c.height = 768; const blobs = [];
+        for (const t of times) { await st.renderer.drawAt(p, t, c, st.platform, st.logoImg); blobs.push(await new Promise((r) => c.toBlob(r, "image/jpeg", 0.85))); }
+        m.textContent = "Claude ocenia nową wersję… (zwykle 20–60 s)";
+        const caps = capTimes(p).map((x) => ({ tekst: x.text, od: round(x.start, 1), do: round(x.end, 1) }));
+        const prompt = `Oceń rolkę reklamową studia detailingowego PO MONTAŻU (${st.plans[st.cur].label}). Usługa: ${SERVICES[st.service]}. Platforma: ${PLATFORMS[st.platform].label}. ${AI_RULES}
+Długość ${pl(total)} s, ${p.segs.length} ujęć: ${L.map((e, i) => `${i + 1}) ${tc(e.start)}–${tc(e.end)} ${e.seg.label || ""}`).join("; ")}.
+Napisy wypalone w obrazie: ${JSON.stringify(caps)}. Dźwięk: ${p.music ? "muzyka dodana przez użytkownika" : p.keepAudio ? "oryginalna ścieżka w ciągłości" : p.muteOriginal ? "brak" : "oryginalny dźwięk ujęć"}.
+Obrazy to kadry gotowej rolki: ${times.map((t, i) => `obraz ${i + 1} = ${tc(t)}`).join("; ")}.
+Skala (bądź wymagający, przeciętna rolka 50–65): hook 0–25, visual 0–20, clarity 0–15, pacing 0–15, cta 0–15, captions 0–10. To prognoza ekspercka, nie gwarancja wyników.
+Odpowiedz WYŁĄCZNIE JSON: {"scores":{"hook":{"score":0,"why":""},"visual":{"score":0,"why":""},"clarity":{"score":0,"why":""},"pacing":{"score":0,"why":""},"cta":{"score":0,"why":""},"captions":{"score":0,"why":""}},"summary":"1–2 zdania","next":["maks. 3 dalsze poprawki"]}`;
+        const ai = await CAP.sample.json(prompt, { images: blobs, modelTier: "default", cache: false, onText: ({ text }) => (m.textContent = `Claude ocenia… ${text.length} znaków`) });
+        const cats = Object.keys(CAT_MAX).map((k) => ({ label: CAT_LABEL[k], score: round(num(ai?.scores?.[k]?.score, 0, CAT_MAX[k], 0), 1), max: CAT_MAX[k] }));
+        p.aiScore = { sig, total: Math.round(cats.reduce((a, x) => a + x.score, 0)), cats, summary: str(ai?.summary, ""), next: (Array.isArray(ai?.next) ? ai.next : []).slice(0, 3).map((x) => str(x)) };
+        refresh();
+      } catch (e) {
+        if (e?.code === "not_granted" || e?.code === "sampling_disabled") { CAP.denied = true; updateAiPill(); }
+        b.disabled = false; m.textContent = AI_ERR[e?.code] || "Ocena AI nie powiodła się.";
+      }
+    };
+  }
+  refresh();
+  show("v-studio");
+}
+const planSig = (p) => JSON.stringify([p.segs.map((g) => [g.src, g.in, g.out]), p.caps.map((c) => [c.text, c.segId, c.start, c.dur]), p.preset, p.muteOriginal]);
+</script>
+</body>
+</html>

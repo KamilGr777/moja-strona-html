@@ -6,6 +6,18 @@ Cały interfejs, raporty i komunikaty są po polsku.
 
 ---
 
+## Wersja w przeglądarce (bez instalacji)
+
+Plik [`docs/index.html`](docs/index.html) to samodzielna wersja aplikacji, która działa w całości w przeglądarce — bez serwera, bazy danych i FFmpeg. Film nie opuszcza urządzenia.
+
+Co potrafi: analiza rolki (ruch, ostrość, jasność, cięcia, głośność, tempo muzyki), ocena 0–100 z uwagami przypiętymi do sekund, krzywa atrakcyjności, hooki, lista ujęć do dogrania, napisy, „Popraw rolkę” (nowy hook, skrócone ujęcia, napisy i CTA), AI Auto Montaż z kilku klipów (wersje VIRAL / PREMIUM / SALES), edycja ujęć i napisów oraz eksport wideo 1080×1920 nagrywany w przeglądarce (MP4 w Chrome, Edge i Safari; WebM w Firefoksie).
+
+Ocena treści przez AI (Claude) działa, gdy strona jest otwarta jako artefakt w claude.ai — wtedy używa konta Claude osoby oglądającej, po jej zgodzie. Otwarta z GitHub Pages lub z dysku działa w trybie analizy technicznej (wyraźnie oznaczonym).
+
+**Uruchomienie na GitHub Pages:** w repozytorium wejdź w *Settings → Pages*, w *Source* wybierz *Deploy from a branch*, wybierz gałąź z tym plikiem i folder `/docs`, zapisz. Po 1–2 minutach strona będzie pod adresem `https://<użytkownik>.github.io/<repozytorium>/`. Pełna wersja (serwer Next.js, kolejka, FFmpeg) nie działa na GitHub Pages — wymaga serwera, patrz „Uruchomienie lokalne”.
+
+---
+
 ## Co działa (zweryfikowane)
 
 | Obszar | Stan | Jak to działa |
